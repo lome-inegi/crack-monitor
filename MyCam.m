@@ -57,7 +57,7 @@ handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
-global imaqhw adapt devinfo numdev
+global imaqhw adapt devinfo numdev format
 imaqhw=imaqhwinfo;
 
 % 'WinVideo' adaptor has to come in front, otherwise MyCam crashes
@@ -110,6 +110,10 @@ set(handles.chkbx_VFlip,'Enable','off');
 set(handles.btn_CamDefaults,'Enable','off');
 set(handles.txt_ROIZoom,'Enable','off');
 set(handles.edt_ROIZoom,'Enable','off');
+
+% This will only be reached if there is a device
+format=char(devinfo.DeviceInfo(1).SupportedFormats(1));
+set(handles.btn_StartPreview,'Enable','on');
 
 
 
@@ -170,6 +174,9 @@ function devices_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global devinfo devid vid
+if (isempty(devinfo.DeviceInfo))
+   return; 
+end
 devid=get(handles.devices,'Value');
 set(handles.formats,'String',devinfo.DeviceInfo(devid).SupportedFormats);
 
@@ -204,6 +211,9 @@ function formats_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns formats contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from formats
 global devinfo devid format
+if(isempty(devinfo.DeviceInfo))
+   return; 
+end
 format=char(devinfo.DeviceInfo(devid).SupportedFormats(get(handles.formats,'Value')));
 set(handles.btn_StartPreview,'Enable','on');
 
@@ -427,6 +437,7 @@ function btn_StopPreview_Callback(hObject, eventdata, handles)
 global vid childImg
 set(handles.btn_Close,'Enable','on');
 set(handles.btn_StartPreview,'Enable','on');
+set(handles.btn_StopPreview,'Enable','off');
 stoppreview(vid);
 % Change the cursor back to 'pointer'
  iptSetPointerBehavior(handles.axes1, []);

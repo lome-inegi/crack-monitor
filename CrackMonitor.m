@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure ni_usb_device
+global listbx ctrl ImgProcDataStructure devId %ni_usb_device
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -92,7 +92,8 @@ ImgProcDataStructure.StrelLR = 3;
 ImgProcDataStructure.CloseActions = 2;
 ImgProcDataStructure.SORemov = 80;
 
-ni_usb_device = '6008'; %Default USB DAQ
+%ni_usb_device = '6008'; %Default USB DAQ
+devId = '';
 % set(gcf,'CloseRequestFcn',@my_closefcn);
 % set(0,'DefaultFigureCloseRequestFcn',@my_closereq)
 % 
@@ -765,7 +766,7 @@ function Start_Test_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
-       rect rect2 pix2mm templateImg ni_usb_device SEImg
+       rect rect2 pix2mm templateImg SEImg devId %ni_usb_device
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -829,15 +830,14 @@ newnumberofsamples = numberofsamples;
 elapseddatapoints = 0;
 
 debug=false;
-[devId, deviceList] = find_ni_usb(ni_usb_device);
+%devId = find_ni_usb(ni_usb_device);
+devId = selectNIdevice();
 if strcmp(devId,'')
-    if isempty(deviceList)
-        debugAns=questdlg('NI DAQ not found, do you want to do a debug session?');
-        if (~strcmp(debugAns,'Yes'))
-           return; 
-        else
-            debug=true;
-        end
+    debugAns=questdlg('No NI DAQ selected, do you want to do a debug session?');
+    if (~strcmp(debugAns,'Yes'))
+       return; 
+    else
+        debug=true;
     end
 end
 
@@ -980,10 +980,9 @@ ShowImage(handletofigure,1,def(:,:,Index),[]); hold on;
 % ET2=toc
    
 function datachunk = CountCycles(flag,DAQsamplerate,numberofsamples)
-global testerfreq testermag cyclesperimage minimumpeakheight halt ni_usb_device
+global testerfreq testermag cyclesperimage minimumpeakheight halt devId %ni_usb_device
 % tic
-boardId = find_ni_usb(ni_usb_device);
-if strcmp(boardId,'')
+if strcmp(devId,'')
    return; 
 end
 s = [];
@@ -994,7 +993,7 @@ catch
    return;
 end
 
-ch = addAnalogInputChannel(s,boardId,'ai0','Voltage');
+ch = addAnalogInputChannel(s,devId,'ai0','Voltage');
 ch(1).TerminalConfig = 'Differential';
 ch(1).Range = [-10.0 10.0];
 s.Rate = DAQsamplerate;
@@ -1010,7 +1009,9 @@ s.DurationInSeconds = numberofsamples/DAQsamplerate;
 peaks = findpeaks(data,'MINPEAKHEIGHT',minimumpeakheight,'NPEAKS',cyclesperimage);
 
 % Stop the test if there's no data on the DAQ
-if isempty(peaks) halt=1; end
+if isempty(peaks)
+    halt=1;
+end
 
 if flag
 %	Zero-pad to increase #bins and frequency resolution
