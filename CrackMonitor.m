@@ -453,8 +453,12 @@ function Settings_Tester_Setup_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Tester_Setup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-uiwait(Tester_Settings)                             % input DAQ settings and image capture frequency
+global devId
+devId = selectNIdevice(); % search for the NI device only when the user opens tester settings
+if (strcmp(devId,''))
+   uiwait(msgbox('No NI device found/selected.','Warning')); 
+end
+uiwait(Tester_Settings) % input DAQ settings and image capture frequency
 
 function Settings_Camera_Setup_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Camera_Setup (see GCBO)
@@ -830,8 +834,8 @@ newnumberofsamples = numberofsamples;
 elapseddatapoints = 0;
 
 debug=false;
-%devId = find_ni_usb(ni_usb_device);
-devId = selectNIdevice();
+%%devId = find_ni_usb(ni_usb_device);
+%devId = selectNIdevice();
 if strcmp(devId,'')
     debugAns=questdlg('No NI DAQ selected, do you want to do a debug session?');
     if (~strcmp(debugAns,'Yes'))
