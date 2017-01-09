@@ -506,7 +506,7 @@ end
 % MaxSlices=size(img,3);
 % Img=im2double(img(:,:,MaxSlices)); 
 % figure;imshow(img(:,:,1));
-figure;imshow(img);
+figure('Name','Crack Region of Interest');imshow(img);
 msgbox('Choose the ROI for the entire crack region','Input region');
 uiwait(gcf);
 rect = getrect; close;
@@ -536,7 +536,7 @@ end
 % MaxSlices=size(img,3);
 % Img=im2double(img(:,:,MaxSlices)); 
 % figure;imshow(img(:,:,1));
-figure;imshow(img);
+figure('Name','Crack Start Region of Interest');imshow(img);
 msgbox('Choose the ROI for the beginning of the crack','Input region');
 uiwait(gcf);
 rect2 = getrect; close; %(handles.axes1);
@@ -621,6 +621,7 @@ h = imrect(gca, rect);
 addNewPositionCallback(h,@(p) crackAnalysis(imgC, p));
 fcn = makeConstrainToRectFcn('imrect',get(gca,'XLim'),get(gca,'YLim'));
 setPositionConstraintFcn(h,fcn);
+crackAnalysis(imgC,rect);
 
 % crackAnalysis(imgC, rect);
 
@@ -1247,7 +1248,11 @@ hold off;
 % figure; imshow(SEImg);
     
 function crackAnalysis(crckimg, cracROI)
-global SEImg
+global SEImg areaRect
+
+if(~isempty(areaRect))
+    delete(areaRect);
+end
 
 %Structuring elements for morphological file processing tasks below
 SESBallOverMLab = strel('ball', 2, -2, 0);
@@ -1346,6 +1351,8 @@ imwrite(SEImg,'ROI.tif','WriteMode','append');
 % figure; 
 % imshow(SEImg);
 imagesc(1:100,1:100,SEImg);
+areaRect = rectangle('Position',[BB(1)+cracROI(1), BB(2)+ cracROI(2), BB(3), BB(4)],'LineWidth',1, 'EdgeColor','r');
+uistack(areaRect,'down',2);
 
 function RC = harris(im, sigma, thresh, radius, rect)
     dx = [-1 0 1; -1 0 1; -1 0 1]; % Derivative masks
