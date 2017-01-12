@@ -22,7 +22,7 @@ function varargout = CrackMonitor(varargin)
 
 % Edit the above text to modify the response to help CrackMonitor
 
-% Last Modified by GUIDE v2.5 10-May-2013 19:26:43
+% Last Modified by GUIDE v2.5 12-Jan-2017 11:42:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure devId %ni_usb_device
+global listbx ctrl ImgProcDataStructure devId triggerPhase
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -93,7 +93,8 @@ ImgProcDataStructure.CloseActions = 2;
 ImgProcDataStructure.SORemov = 80;
 
 %ni_usb_device = '6008'; %Default USB DAQ
-devId = '';
+%devId = '';
+triggerPhase = pi/2; % 90 deg
 % set(gcf,'CloseRequestFcn',@my_closefcn);
 % set(0,'DefaultFigureCloseRequestFcn',@my_closereq)
 % 
@@ -449,15 +450,20 @@ DistanceCalibration
 ctrl = 0;
 
 
-function Settings_Tester_Setup_Callback(hObject, eventdata, handles)
+function Settings_Select_NI_Device_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Tester_Setup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global devId
 devId = selectNIdevice(); % search for the NI device only when the user opens tester settings
-if (strcmp(devId,''))
+if (isempty(devId))%strcmp(devId,''))
    uiwait(msgbox('No NI device found/selected.','Warning')); 
 end
+
+function Settings_Tester_Setup_Callback(hObject, eventdata, handles)
+% hObject    handle to Settings_Tester_Setup (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 uiwait(Tester_Settings) % input DAQ settings and image capture frequency
 
 function Settings_Camera_Setup_Callback(hObject, eventdata, handles)
@@ -771,7 +777,7 @@ function Start_Test_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
-       rect rect2 pix2mm templateImg SEImg devId %ni_usb_device
+       rect rect2 pix2mm templateImg SEImg devId triggerPhase %ni_usb_device
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -837,12 +843,15 @@ elapseddatapoints = 0;
 debug=false;
 %%devId = find_ni_usb(ni_usb_device);
 %devId = selectNIdevice();
-if strcmp(devId,'')
-    debugAns=questdlg('No NI DAQ selected, do you want to do a debug session?');
-    if (~strcmp(debugAns,'Yes'))
-       return; 
+if isempty(devId)%strcmp(devId,'')
+    debugAns=questdlg('No NI DAQ selected, do you want to do a debug session?','NI DAQ','Yes','No','Configure','Yes');
+    if (strcmp(debugAns,'Yes'))
+       debug=true;
+    elseif (strcmp(debugAns,'Configure'))
+        Settings_Select_NI_Device_Callback([],[],[]);
+        return;
     else
-        debug=true;
+        return;
     end
 end
 
@@ -851,21 +860,37 @@ tic
 while halt==0
 % 	if i == 0 tic; end
     if ~debug
-        datachunk = CountCycles(true,DAQsamplerate,newnumberofsamples);
-        data(i*l+1:(i+1)*l)=0;
-        data(i*l+1+elapseddatapoints:(i+1)*l) = datachunk;
+        [datachunk,lastPeakTime,lastPeakMag] = CountCycles(true,DAQsamplerate,newnumberofsamples);
+        %data(i*l+1:(i+1)*l)=0;
+        %data(i*l+1+elapseddatapoints:(i+1)*l) = datachunk;
     else
         pause(cyclesperimage/testerfreq);
     end
 %     plot(handles.axes2,data);
     j=j+cyclesperimage;
+    
+    if (~debug)
+        if (lastPeakMag >= 0) % If the mag was zero, the program would have ended.
+            lastPeakPhase = pi/2;
+        else
+            lastPeakPhase = 3*pi/2;
+        end
+        triggerPhaseDelay = (triggerPhase - lastPeakPhase)/(2*pi*testerfreq)-.1;
+        nCyclesDelay = ceil((24*60*60*(now-lastPeakTime) - triggerPhaseDelay) * testerfreq);
+        % Wait for the right time to trigger, according to the intended
+        % trigger Phase
+        pause(triggerPhaseDelay - 24*60*60*(now-lastPeakTime) + nCyclesDelay/testerfreq);
+        % triggerPhaseDelay: -.1: If instead of an image we grab samples from NI's DAQ, it needs 100 ms margin.
+        % I measured the time startForeground() took to complete, and it took around 100 ms more than the configured runtime.
+        % The camera takes around 0.5 for all 5 images, so maybe 0.1 is not too bad. 
+    end
     GrabImage(handles,j);
 % ET2=toc
-    if i<nrdispcycles i=i+1; end
-    if i==nrdispcycles 
-        data(1:(nrdispcycles-1)*l) = data(l+1:nrdispcycles*l);
-        i=i-1;
-    end
+%     if i<nrdispcycles i=i+1; end
+%     if i==nrdispcycles 
+%         data(1:(nrdispcycles-1)*l) = data(l+1:nrdispcycles*l);
+%         i=i-1;
+%     end
 % 	[cim, RC, I] = harris(im2double(Img), sigma, thresh, radius, disp, rect2);
 % 	A = harris(im2double(Img), sigma, thresh, radius, rect2);
 
@@ -984,10 +1009,10 @@ ShowImage(handletofigure,1,def(:,:,Index),[]); hold on;
 % imwrite(Img,['TestImages\',num2str(j),'.jpg']);
 % ET2=toc
    
-function datachunk = CountCycles(flag,DAQsamplerate,numberofsamples)
+function [datachunk, lastPeakTime, lastPeakMag] = CountCycles(flag,DAQsamplerate,numberofsamples)
 global testerfreq testermag cyclesperimage minimumpeakheight halt devId %ni_usb_device
 % tic
-if strcmp(devId,'')
+if isempty(devId)%strcmp(devId,'')
    return; 
 end
 s = [];
@@ -1008,10 +1033,16 @@ s.DurationInSeconds = numberofsamples/DAQsamplerate;
 %set(ai, 'SampleRate', DAQsamplerate);               % in Hertz
 %set(ai, 'SamplesPerTrigger', numberofsamples);  
 
-[data, timestamps] = startForeground(s);
+[data, timestamps, triggerTime] = startForeground(s);
 %start(ai);
 %data = getdata(ai);
-peaks = findpeaks(data,'MINPEAKHEIGHT',minimumpeakheight,'NPEAKS',cyclesperimage);
+[peaks, locs] = findpeaks(data,'MINPEAKHEIGHT',minimumpeakheight,'NPEAKS',cyclesperimage);
+lastPeakLoc = locs(length(locs));
+% TimeStamp of the last peak is the TriggerTime + the time that passed from
+% trigger to acquisition of that sample (converted from seconds to fraction
+% of a day: therefore x/24/60/60)
+lastPeakTime = triggerTime + timestamps(lastPeakLoc)/24/60/60;
+lastPeakMag = data(lastPeakLoc);
 
 % Stop the test if there's no data on the DAQ
 if isempty(peaks)
