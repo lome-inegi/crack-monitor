@@ -38,6 +38,35 @@ function [ devId ] = selectNIdevice(  )
         return;
     end
     
+    %% Test device
+    try
+        s = daq.createSession('ni');
+    catch
+        devId = '';
+        msgbox('Driver error');
+        release(s);delete(s);
+        return;
+    end
+    try
+        ch = addAnalogInputChannel(s,'Dev2','ai0','Voltage');
+    catch
+        devId = '';
+        msgbox('Error configuring AI0 channel.');
+        release(s);delete(s);
+        return;
+    end
+    try
+        ch(1).TerminalConfig = 'Differential';
+    catch
+        devId = '';
+        msgbox('Differential configuration not supported.');
+        release(s);delete(s);
+        return;
+    end
+    release(s);delete(s);
+    
+    %% Device accepted
+    
     usingMsgbox = msgbox(['Using NI ', devices(selection).get('Model'), '.']);
     edithandle = findobj(usingMsgbox,'Style','pushbutton');
     set(edithandle,'Visible','off');
