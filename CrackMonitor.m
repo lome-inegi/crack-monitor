@@ -870,19 +870,24 @@ while halt==0
     j=j+cyclesperimage;
     
     if (~debug)
-        if (lastPeakMag >= 0) % If the mag was zero, the program would have ended.
+        if (lastPeakMag >= 0)
             lastPeakPhase = pi/2;
         else
             lastPeakPhase = 3*pi/2;
+            % This will never happen unless the code is changed. (findpeaks
+            % only searches for maxima.
         end
-        triggerPhaseDelay = (triggerPhase - lastPeakPhase)/(2*pi*testerfreq)-.1;
+        triggerDelay = 0.1; % Time it takes from trigger to action (photo).
+        % Aprox to 100ms. If instead of an image we grab samples from NI's 
+        % DAQ, it works with around 100 ms margin. I measured the time 
+        % startForeground() took to complete, and it took around 100 ms
+        % more than the configured runtime. The camera takes around 0.5 for
+        % all 5 images, 0.2 if only 1 image. 
+        triggerPhaseDelay = (triggerPhase - lastPeakPhase)/(2*pi*testerfreq)-triggerDelay;
         nCyclesDelay = ceil((24*60*60*(now-lastPeakTime) - triggerPhaseDelay) * testerfreq);
         % Wait for the right time to trigger, according to the intended
         % trigger Phase
         pause(triggerPhaseDelay - 24*60*60*(now-lastPeakTime) + nCyclesDelay/testerfreq);
-        % triggerPhaseDelay: -.1: If instead of an image we grab samples from NI's DAQ, it needs 100 ms margin.
-        % I measured the time startForeground() took to complete, and it took around 100 ms more than the configured runtime.
-        % The camera takes around 0.5 for all 5 images, so maybe 0.1 is not too bad. 
     end
     GrabImage(handles,j);
 % ET2=toc
@@ -1037,17 +1042,18 @@ s.DurationInSeconds = numberofsamples/DAQsamplerate;
 %start(ai);
 %data = getdata(ai);
 [peaks, locs] = findpeaks(data,'MINPEAKHEIGHT',minimumpeakheight,'NPEAKS',cyclesperimage);
+
+% Stop the test if there's no data on the DAQ
+if isempty(peaks)
+    halt=1;
+end
+
 lastPeakLoc = locs(length(locs));
 % TimeStamp of the last peak is the TriggerTime + the time that passed from
 % trigger to acquisition of that sample (converted from seconds to fraction
 % of a day: therefore x/24/60/60)
 lastPeakTime = triggerTime + timestamps(lastPeakLoc)/24/60/60;
 lastPeakMag = data(lastPeakLoc);
-
-% Stop the test if there's no data on the DAQ
-if isempty(peaks)
-    halt=1;
-end
 
 if flag
 %	Zero-pad to increase #bins and frequency resolution
