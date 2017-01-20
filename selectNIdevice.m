@@ -27,14 +27,15 @@ function [ devId ] = selectNIdevice(  )
         else
             devId = devices(1).get('ID');
             selection = 1;
+            uiwait(msgbox(['NI ', devices(selection).get('Model'), ' found'])); 
         end
     else
-        disp 'No NI device found';
+        uiwait(msgbox('No NI device found.','Warning')); 
         return;
     end
 
     if(strcmp(devId,''))
-        disp 'No NI device selected';
+        uiwait(msgbox('No NI device selected.','Warning')); 
         return;
     end
     
@@ -43,36 +44,38 @@ function [ devId ] = selectNIdevice(  )
         s = daq.createSession('ni');
     catch
         devId = '';
-        msgbox('Driver error');
         release(s);delete(s);
+        uiwait(msgbox('Driver error'));
         return;
     end
     try
-        ch = addAnalogInputChannel(s,'Dev2','ai0','Voltage');
+        ch = addAnalogInputChannel(s,devId,'ai0','Voltage');
     catch
         devId = '';
-        msgbox('Error configuring AI0 channel.');
         release(s);delete(s);
+        uiwait(msgbox('Error configuring AI0 channel.'));
         return;
     end
     try
         ch(1).TerminalConfig = 'Differential';
     catch
         devId = '';
-        msgbox('Differential configuration not supported.');
         release(s);delete(s);
+        uiwait(msgbox('Differential configuration not supported.'));
         return;
     end
     release(s);delete(s);
     
     %% Device accepted
     
-    usingMsgbox = msgbox(['Using NI ', devices(selection).get('Model'), '.']);
+    %usingMsgbox = msgbox(['Using NI ', devices(selection).get('Model'), '.']);
+    usingMsgbox = msgbox(['NI ', devices(selection).get('Model'), ' is compatible and will be used.']);
     edithandle = findobj(usingMsgbox,'Style','pushbutton');
     set(edithandle,'Visible','off');
     pause(1);
     if (ishandle(usingMsgbox))
         close(usingMsgbox);
     end
+    %uiwait(msgbox([devices(selection).get('Model'), ' ']));
 end
 

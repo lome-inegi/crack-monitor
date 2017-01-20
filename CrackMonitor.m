@@ -456,9 +456,7 @@ function Settings_Select_NI_Device_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global devId
 devId = selectNIdevice(); % search for the NI device only when the user opens tester settings
-if (isempty(devId))%strcmp(devId,''))
-   uiwait(msgbox('No NI device found/selected.','Warning')); 
-end
+
 
 function Settings_Tester_Setup_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Tester_Setup (see GCBO)
