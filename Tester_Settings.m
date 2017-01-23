@@ -22,7 +22,7 @@ function varargout = Tester_Settings(varargin)
 
 % Edit the above text to modify the response to help Tester_Settings
 
-% Last Modified by GUIDE v2.5 11-Jan-2017 11:29:54
+% Last Modified by GUIDE v2.5 23-Jan-2017 12:45:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -202,3 +202,18 @@ function triggerphase_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in maxButton.
+function maxButton_Callback(hObject, eventdata, handles)
+% hObject    handle to maxButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.triggerphase,'String','90.0');
+
+% --- Executes on button press in minButton.
+function minButton_Callback(hObject, eventdata, handles)
+% hObject    handle to minButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.triggerphase,'String','270.0');
