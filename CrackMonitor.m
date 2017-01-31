@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure devId triggerPhase
+global listbx ctrl ImgProcDataStructure devId triggerPhase triggerDelay
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -94,7 +94,13 @@ ImgProcDataStructure.SORemov = 80;
 
 %ni_usb_device = '6008'; %Default USB DAQ
 %devId = '';
-triggerPhase = pi/2; % 90 deg
+if (isempty(triggerPhase))    
+    triggerPhase = pi/2; % 90 deg
+end
+
+if (isempty(triggerDelay))
+    triggerDelay = 0.1;
+end
 % set(gcf,'CloseRequestFcn',@my_closefcn);
 % set(0,'DefaultFigureCloseRequestFcn',@my_closereq)
 % 
@@ -775,7 +781,7 @@ function Start_Test_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
-       rect rect2 pix2mm templateImg SEImg devId triggerPhase %ni_usb_device
+       rect rect2 pix2mm templateImg SEImg devId triggerPhase triggerDelay %ni_usb_device
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -875,7 +881,8 @@ while halt==0
             % This will never happen unless the code is changed. (findpeaks
             % only searches for maxima.
         end
-        triggerDelay = 0.1; % Time it takes from trigger to action (photo).
+        %triggerDelay = 0.1; % Time it takes from trigger to action
+        %(photo). % Now user definable.
         % Aprox to 100ms. If instead of an image we grab samples from NI's 
         % DAQ, it works with around 100 ms margin. I measured the time 
         % startForeground() took to complete, and it took around 100 ms

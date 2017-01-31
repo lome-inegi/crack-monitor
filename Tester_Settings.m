@@ -22,7 +22,7 @@ function varargout = Tester_Settings(varargin)
 
 % Edit the above text to modify the response to help Tester_Settings
 
-% Last Modified by GUIDE v2.5 23-Jan-2017 12:45:38
+% Last Modified by GUIDE v2.5 31-Jan-2017 15:02:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,7 +52,7 @@ function Tester_Settings_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   unrecognized PropertyName/PropertyValue pairs from the
 %            command line (see VARARGIN)
-global testerfreq cyclesperimage minimumpeakheight triggerPhase
+global testerfreq cyclesperimage minimumpeakheight triggerPhase triggerDelay
 
 % Choose default command line output for Tester_Settings
 handles.output = hObject;
@@ -63,6 +63,7 @@ set(handles.testerfreq,'String',num2str(testerfreq,'%.2f'));
 set(handles.cyclesperimage,'String',cyclesperimage);
 set(handles.minimumpeakheight,'String',num2str(minimumpeakheight,'%.2f'));
 set(handles.triggerphase,'String',num2str(rad2deg(triggerPhase),'%.0f'));
+set(handles.triggerdelay,'String',num2str(triggerDelay,'%.3f'));
 
 % --- Outputs from this function are returned to the command line.
 function varargout = Tester_Settings_OutputFcn(hObject, eventdata, handles)
@@ -170,13 +171,14 @@ function btn_OK_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_OK (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global testerfreq cyclesperimage minimumpeakheight triggerPhase
+global testerfreq cyclesperimage minimumpeakheight triggerPhase triggerDelay
 
 testerfreq = str2num(get(handles.testerfreq, 'String'));
 cyclesperimage = str2num(get(handles.cyclesperimage, 'String'));
 %DAQsamplerate = str2num(get(handles.DAQsamplerate, 'String'));
 minimumpeakheight = str2num(get(handles.minimumpeakheight, 'String'));
 triggerPhase = deg2rad(str2num(get(handles.triggerphase, 'String')));
+triggerDelay = str2num(get(handles.triggerdelay, 'String'));
 
 close();
 
@@ -209,11 +211,34 @@ function maxButton_Callback(hObject, eventdata, handles)
 % hObject    handle to maxButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.triggerphase,'String','90.0');
+set(handles.triggerphase,'String','90');
 
 % --- Executes on button press in minButton.
 function minButton_Callback(hObject, eventdata, handles)
 % hObject    handle to minButton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-set(handles.triggerphase,'String','270.0');
+set(handles.triggerphase,'String','270');
+
+
+
+function triggerdelay_Callback(hObject, eventdata, handles)
+% hObject    handle to triggerdelay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of triggerdelay as text
+%        str2double(get(hObject,'String')) returns contents of triggerdelay as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function triggerdelay_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to triggerdelay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
