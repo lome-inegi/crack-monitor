@@ -998,7 +998,8 @@ end
 trigger(vid);
 def= getdata(vid,5,'single');
 [Index, F] = BestFocusedImage(def);
-if (F < 1.13)   % If the best focused image is not very good, try to sharpen it
+disp(['Selected image ', num2str(Index)]);
+if (F < 1.13 && false)   % If the best focused image is not very good, try to sharpen it
                 % Maybe let the user define the limit value?
                 % TODO: Select a good limit value.
     H = padarray(2,[1 1]) - fspecial('gaussian'); % Generate unsharpen filter
