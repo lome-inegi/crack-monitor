@@ -51,24 +51,27 @@ function CrackOrigin_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackOrigin (see VARARGIN)
-global DefaultsOrigin datastructure setupImg ImgOriginDataStructure rectCrackStartROI referenceCrackOrigin
+global DefaultsOrigin datastructure ImgOriginDataStructure
 % Choose default command line output for CrackOrigin
 handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
 if (isempty(ImgOriginDataStructure))
-   ImgOriginDataStructure.originRadius = 5;
-   ImgOriginDataStructure.radius = 0.5;
-   ImgOriginDataStructure.sigma = 1;
+    disp('Setting default values in CrackOrigin.m');
+    ImgOriginDataStructure.originRadius = 5;
+    ImgOriginDataStructure.radius = 0.5;
+    ImgOriginDataStructure.sigma = 1;
 end
 
-if (~isempty(referenceCrackOrigin))
-   %If there is a previous result 
-   
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
 end
+
 % --- Load image into graphics handle
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);
 
 DefaultsOrigin = ImgOriginDataStructure;
 
@@ -140,7 +143,12 @@ function sld_originRadius_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgOriginDataStructure setupImg
+global ImgOriginDataStructure datastructure
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
+end
 minRes = 1;
 originRadius = get(handles.sld_originRadius,'Value');
 originRadius = double(uint16(originRadius / minRes)) * minRes; % Only allow values multiple of 0.5
@@ -151,7 +159,7 @@ set(handles.sld_originRadius,'Value',originRadius);
 set(handles.edt_originRadius,'Value',originRadius);
 set(handles.edt_originRadius,'String',num2str(originRadius));
 ImgOriginDataStructure.originRadius = originRadius;
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);
 
 % --- Executes during object creation, after setting all properties.
 function sld_originRadius_CreateFcn(hObject, eventdata, handles)
@@ -185,13 +193,18 @@ function sld_Sigma_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgOriginDataStructure setupImg
+global ImgOriginDataStructure datastructure
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
+end
 sigma = uint16(get(handles.sld_Sigma,'Value'));
 set(handles.sld_Sigma,'Value',sigma);
 set(handles.edt_Sigma,'Value',sigma);
 set(handles.edt_Sigma,'String',num2str(sigma));
 ImgOriginDataStructure.sigma = double(sigma);
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);
 
 % --- Executes during object creation, after setting all properties.
 function sld_Sigma_CreateFcn(hObject, eventdata, handles)
@@ -226,7 +239,12 @@ function sld_Radius_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgOriginDataStructure setupImg  
+global ImgOriginDataStructure datastructure  
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
+end
 minRes = 0.5;
 radius = get(handles.sld_Radius,'Value');
 radius = double(uint16(radius / minRes)) * minRes;
@@ -237,7 +255,7 @@ set(handles.sld_Radius,'Value',radius);
 set(handles.edt_Radius,'Value',radius);
 set(handles.edt_Radius,'String',num2str(radius));
 ImgOriginDataStructure.radius = radius;
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);
 
 % --- Executes during object creation, after setting all properties.
 function sld_Radius_CreateFcn(hObject, eventdata, handles)
@@ -320,8 +338,9 @@ function btn_Cancel_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_Cancel (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global referenceCrackOrigin
+global referenceCrackOrigin ImgOriginDataStructure DefaultsOrigin
 referenceCrackOrigin = [];
+ImgOriginDataStructure = DefaultsOrigin;
 close
 
 % % --- Executes when user attempts to close figure1.
@@ -338,8 +357,6 @@ close
 function getCrackOrigin(handles, im)
 global ImgOriginDataStructure rectCrackStartROI ImgOriginTempData referenceCrackOrigin tempReferenceCrackOrigin
 
-ImgOriginDataStructure.deltaX = [];
-ImgOriginDataStructure.deltaY = [];
 set(handles.messages,'String','');
 sigma = ImgOriginDataStructure.sigma;
 radius = ImgOriginDataStructure.radius;
@@ -414,14 +431,19 @@ function but_select_point_Callback(hObject, eventdata, handles)
 % hObject    handle to but_select_point (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global referenceCrackOrigin rectCrackStartROI setupImg
+global referenceCrackOrigin rectCrackStartROI datastructure
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
+end
 [x, y] = ginput(1);
 if (y<rectCrackStartROI(2)),y=rectCrackStartROI(2);end
 if (y>rectCrackStartROI(2)+rectCrackStartROI(4)),y=rectCrackStartROI(2)+rectCrackStartROI(4);end
 if (x<rectCrackStartROI(1)),x=rectCrackStartROI(1);end
 if (x>rectCrackStartROI(1)+rectCrackStartROI(3)),x=rectCrackStartROI(1)+rectCrackStartROI(3);end
 referenceCrackOrigin = [y-rectCrackStartROI(2) ,x-rectCrackStartROI(1)];
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);
 
 
 % function processSelectedPoint(handles,idx)
@@ -448,6 +470,11 @@ function btn_Clear_Selection_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_Clear_Selection (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global referenceCrackOrigin setupImg
+global referenceCrackOrigin datastructure
+if datastructure.captureimg
+    img=datastructure.captureimg;
+else
+    img=datastructure.img(:,:,1);
+end
 referenceCrackOrigin = [];
-getCrackOrigin(handles,setupImg);
+getCrackOrigin(handles,img);

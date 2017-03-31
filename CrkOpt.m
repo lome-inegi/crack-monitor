@@ -114,7 +114,7 @@ min=0.5;
 max=2.5;
 set(handles.sld_GrayThresh,'Min',min, ...
                            'Max',max, ...
-                           'SliderStep',[0.1/(max-min) 0.5/(max-min)], ...
+                           'SliderStep',[0.01/(max-min) 0.5/(max-min)], ...
                            'Value',a);
 set(handles.edt_GrayThresh,'Value',a, ...
                            'String',num2str(a));
@@ -184,7 +184,7 @@ function Analyse_crack(handles)
 % hObject    handle to Settings_Analyse_pre_crack (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global rectCrackROI rectCrackStartROI templateImg crackOrigin setupImg referenceCrackOrigin
+global rectCrackROI rectCrackStartROI templateImg crackOrigin setupImg referenceCrackOrigin ImgOriginDataStructure
 
 % imgC=setupImg;
 % MaxImg=size(img,3);
@@ -220,7 +220,7 @@ global rectCrackROI rectCrackStartROI templateImg crackOrigin setupImg reference
 correctedCrackStartROI = locateOrigin(setupImg,rectCrackROI,rectCrackStartROI,templateImg);
 
 % Find crack start inside 'correctedCrackStartROI'
-[r, c]=harris(im2double(setupImg), 1, 0.5, 5, referenceCrackOrigin, correctedCrackStartROI);
+[r, c]=harris(im2double(setupImg), ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);
 deltaX = c; deltaY = r;
 crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
 %% Show result
@@ -384,7 +384,8 @@ function edt_GrayThresh_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of edt_GrayThresh as text
 %        str2double(get(hObject,'String')) returns contents of edt_GrayThresh as a double
 global ImgProcDataStructure crackOrigin setupImg rectCrackROI
-GrayThresh = floor(str2num(get(handles.edt_GrayThresh,'String')));
+minRes = 0.1;
+GrayThresh = floor(str2double(get(handles.edt_GrayThresh,'String')) / minRes) * minRes;
 set(handles.sld_GrayThresh,'Value',GrayThresh);
 ImgProcDataStructure.GrayThresh = GrayThresh;
 crckbin(handles,setupImg,rectCrackROI,crackOrigin);

@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure devId triggerPhase triggerDelay
+global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase triggerDelay
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -100,6 +100,12 @@ end
 
 if (isempty(triggerDelay))
     triggerDelay = 0.1;
+end
+
+if (isempty(ImgOriginDataStructure))
+   ImgOriginDataStructure.originRadius = 5;
+   ImgOriginDataStructure.radius = 0.5;
+   ImgOriginDataStructure.sigma = 1;
 end
 
 
@@ -607,7 +613,7 @@ if (rectCrackStartROI(2)+rectCrackStartROI(4) > size(img,1))
     rectCrackStartROI(4) = size(img,1) - rectCrackStartROI(2);
 end
 %% Generate template image
-templateImg=imcrop(setupImg, rectCrackStartROI);
+templateImg=imcrop(img, rectCrackStartROI);
 %% Calculate X Y correlation peaks for the original image
 imgROI = im2double(imcrop(img, rectCrackROI));
 cc2 = xcorr2(imgROI, im2double(templateImg));
@@ -665,7 +671,7 @@ if isempty(SEImg)
 end
 
 if isempty(referenceCrackOrigin)
-    answer = questdlg('If you proceed, the reference Crack Origin will be automatically calculated.\nDo you want to proceed?','','Yes','No','Yes');
+    answer = questdlg({'The reference Crack Origin will be automatically calculated, please consider performing its previous calculation.','Do you want to proceed?'},'','Yes','No','Yes');
     if (~strcmp(answer,'Yes'))
         return;
     end
@@ -702,7 +708,7 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg crackOrigin SEImg referenceCrackOrigin
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg crackOrigin SEImg referenceCrackOrigin ImgOriginDataStructure
 
 if (isempty(datastructure))
     msgbox('No images to analyse.','Error');
@@ -720,6 +726,13 @@ if isempty(SEImg)
     msgbox('No strutural element defined, please go to Determine Structure.','Error');
     return;
 end
+if isempty(referenceCrackOrigin)
+    answer = questdlg({'If you proceed, the reference Crack Origin will be automatically calculated for each step.','Do you want to proceed?'},'','Yes','No','Yes');
+    if (~strcmp(answer,'Yes'))
+        return;
+    end
+end
+
 
 %Execution control
 ctrl=0;
@@ -792,15 +805,15 @@ for i=1:MaxSlices
     
     
     %% HARRIS
-    % Find the crack start ROI within 'rect1' ROI  
+    % Find the crack start ROI within 'rectCrackROI' ROI  
     correctedCrackStartROI = locateOrigin(imgC,rectCrackROI,rectCrackStartROI,templateImg);
     
     % Find crack start inside 'correctedCrackStartROI'
-    [r, c]=harris(im2double(imgC), 1, 0.5, 5, referenceCrackOrigin, correctedCrackStartROI);
+    [r, c]=harris(im2double(imgC), ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);
     deltaX = c; deltaY = r;
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
-    
-    figure;    imshow(imgC); hold on; plot(crackOrigin(2),crackOrigin(1),'r+');rectangle('Position',rectCrackStartROI,'EdgeColor','r');rectangle('Position',correctedCrackStartROI,'EdgeColor','b'); hold off;
+    %harrisfigure
+    %figure;    imshow(imgC); hold on; plot(crackOrigin(2),crackOrigin(1),'r+');rectangle('Position',rectCrackStartROI,'EdgeColor','r');rectangle('Position',correctedCrackStartROI,'EdgeColor','b'); hold off;
     %% 
     
 %     figure; imshow(imgC), hold on
@@ -851,7 +864,8 @@ function Start_Test_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
-       rectCrackROI rectCrackStartROI pix2mm templateImg SEImg devId triggerPhase triggerDelay %ni_usb_device
+       rectCrackROI rectCrackStartROI pix2mm templateImg SEImg devId ...
+       triggerPhase triggerDelay ImgOriginDataStructure referenceCrackOrigin
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -971,7 +985,7 @@ while halt==0
     correctedCrackStartROI = locateOrigin(imgC,rectCrackROI,rectCrackStartROI,templateImg);
 
     % Find crack start inside 'correctedCrackStartROI'
-    [r, c]=harris(imgC, 1, 0.5, correctedCrackStartROI);
+    [r, c]=harris(imgC, ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);
     deltaX = c; deltaY = r;
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
 
@@ -1327,8 +1341,8 @@ crckbin=bwareaopen(bw,100);
 stats = regionprops(crckbin, 'Area','BoundingBox','Extrema');
 AreaArray=zeros(1,length(stats));
 for j=1:length(stats), AreaArray(j) = stats(j).Area; end
-idxMax = find(max(AreaArray)==AreaArray);
-
+%idxMax = find(max(AreaArray)==AreaArray);
+[~,idxMax] = max(AreaArray);
 % if toRight
 %     TipXX = stats(idxMax).Extrema(3); TipYY = stats(idxMax).Extrema(11);
 %     RootXX = X - cracROI(1); RootYY = Y - cracROI(2);
@@ -1436,9 +1450,9 @@ function crackOriginCalculation_Callback(hObject, eventdata, handles)
 % hObject    handle to crackOriginCalculation (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global setupImg rectCrackROI
-if (isempty(setupImg))
-   msgbox('No image available','Error');
+global datastructure rectCrackROI
+if isempty(datastructure)
+   msgbox('Not enough information for calculation', 'Error' );
    return;
 end
 if isempty(rectCrackROI)
