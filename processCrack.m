@@ -116,13 +116,12 @@ for k=1:length(stats)
    end
 end
 
+[~,idxMax]=max(AreaArray);
 if toRight
-    idxMax=find(AreaArray>100, 1, 'last' );
     TipXX = stats(idxMax).Extrema(3);
     lengthpix = TipXX - (X-cracROI(1));
 else
-    idxMax=find(AreaArray>100, 1 );
-    TipXX = stats(idxMax).Extrema(8); 
+    TipXX = stats(idxMax).Extrema(8);
     lengthpix = (X-cracROI(1)) - TipXX; 
 end
 

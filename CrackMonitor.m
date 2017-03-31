@@ -22,7 +22,7 @@ function varargout = CrackMonitor(varargin)
 
 % Edit the above text to modify the response to help CrackMonitor
 
-% Last Modified by GUIDE v2.5 12-Jan-2017 11:42:15
+% Last Modified by GUIDE v2.5 31-Mar-2017 14:58:59
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -101,21 +101,6 @@ end
 if (isempty(triggerDelay))
     triggerDelay = 0.1;
 end
-% set(gcf,'CloseRequestFcn',@my_closefcn);
-% set(0,'DefaultFigureCloseRequestFcn',@my_closereq)
-% 
-% function my_closereq(src,evnt)
-% % User-defined close request function 
-% % delete(handles.figure1)
-% clc; clear all; close all;
-% delete vid;
-% clear vid;
-
-
-
-
-% UIWAIT makes CrackMonitor wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
 
 
 % --- Outputs from this function are returned to the command line.
@@ -129,45 +114,51 @@ function varargout = CrackMonitor_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 % --------------------------------------------------------------------
-
 function File_Callback(hObject, eventdata, handles)
 % hObject    handle to File (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+% --------------------------------------------------------------------
 function File_Load_Callback(hObject, eventdata, handles)
 global ValueSlice datastructure setupImg ctrl
 
- [filenames, pathname] = uigetfile({'*.jpg';'*.tif';'*.gif';'*.*'},'MultiSelect', 'on');
-  if isequal(filenames, 0)
+[filenames, pathname] = uigetfile({'*.jpg';'*.tif';'*.gif';'*.*'},'MultiSelect', 'on');
+if isequal(filenames, 0)
     return
- end
+end
  
- filenames = cellstr(filenames);  
- names=zeros(1,length(filenames));
- for n = 1:length(filenames)
-   afile = fullfile(pathname, filenames{n});
-   [pathstr, name, ext] = fileparts(afile);
-   img(:,:,n)= imread(afile);
-   names(n)=str2num(name);
- end
- 
-    datastructure.names = names;
-    datastructure.img = img;
-    datastructure.captureimg = [];
+filenames = cellstr(filenames);  
+names=zeros(1,length(filenames));
+for n = 1:length(filenames)
+    afile = fullfile(pathname, filenames{n});
+    [~, name, ~] = fileparts(afile);
+    tempImg = imread(afile);
+    if (size(tempImg,3)==1)
+        img(:,:,n) = tempImg;
+    else
+        disp('RGB image loaded, converting to grayscale.');
+        img(:,:,n) = rgb2gray(tempImg);
+    end
+    names(n)=str2double(name);
+end
+
+datastructure.names = names;
+datastructure.img = img;
+datastructure.captureimg = [];
    
 ValueSlice = 1;
 MaxSlices = length(filenames);
 
 % ======= Activate Slider (if nr of files > 1) ========
 if (MaxSlices==1)
-set(handles.slider1,'Value',1,'Min',1,'Max',1,'SliderStep',...
-[0 0]);
-set(handles.slider1,'Visible','off');
+    set(handles.slider1,'Value',1,'Min',1,'Max',1,'SliderStep',...
+    [0 0]);
+    set(handles.slider1,'Visible','off');
 else
-set(handles.slider1,'Value',1,'Min',1,'Max',MaxSlices,...
-'SliderStep', [1/(MaxSlices-1) 5/(MaxSlices-1)]);
-set(handles.slider1,'Visible','on');
+    set(handles.slider1,'Value',1,'Min',1,'Max',MaxSlices,...
+    'SliderStep', [1/(MaxSlices-1) 5/(MaxSlices-1)]);
+    set(handles.slider1,'Visible','on');
 end
 
 % 'ctrl' is a control variable. While equal to '1', no measurements can be
@@ -180,6 +171,7 @@ set(handles.tOI,'Visible','on','String',string);
 setupImg = datastructure.img(:,:,ValueSlice);
 ShowImage(handles,1,datastructure.img(:,:,ValueSlice),[]);
 
+% --------------------------------------------------------------------
 function File_Save_Callback(hObject, eventdata, handles)
 % hObject    handle to File_Save (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -196,6 +188,7 @@ else
     imwrite(datastructure.img(:,:,ValueSlice),fullfile(pathname, filename));
 end
 
+% --------------------------------------------------------------------
 function File_Close_Callback(hObject, eventdata, handles)
 % hObject    handle to File_Close (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -208,7 +201,7 @@ if sz>1
     %img(:,:,min(ValueSlice,end):end) = img(:,:,min(ValueSlice+1,end):end);
     img(:,:,ValueSlice:sz-1) = img(:,:,ValueSlice+1:sz);
     img=img(:,:,1:sz-1);
-    if ValueSlice>1 ValueSlice=ValueSlice-1; else ValueSlice=1; end
+    if ValueSlice>1; ValueSlice=ValueSlice-1; else ValueSlice=1; end
     datastructure.img=img;
 else
     datastructure.img=zeros(size(img),'uint8');
@@ -231,6 +224,7 @@ else
     ShowImage(handles,1,datastructure.img(:,:,ValueSlice),[]);
 end
 
+% --------------------------------------------------------------------
 function File_Close_All_Callback(hObject, eventdata, handles)
 % hObject    handle to File_Close_All (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -246,19 +240,17 @@ set(handles.axes1,'Visible','off');
 set(handles.tOI,'Visible','off');
 set(handles.slider1,'Visible','off');
 
-% --- Executes on slider movement.
+% --------------------------------------------------------------------
 function slider1_Callback(hObject, eventdata, handles)
-
+% Executes on Slider Movement
 global ValueSlice datastructure 
 
-% ValueSlice = round(get(handles.slider1,'Value'));
 ValueSlice = get(handles.slider1,'Value');
-%  file(datastructure(ValueSlice).file,'Parent',handles.axes1,'CDataMapping','scaled');
-%  set(handles.axes1, 'Visible', 'off', 'Units', 'pixels');
-ShowImage(handles,1,datastructure.img(:,:,ValueSlice),[]);
-string = horzcat('Original Images:', ' ', num2str(ValueSlice));
+ShowImage(handles,1,datastructure.img(:,:,floor(ValueSlice)),[]);
+string = horzcat('Original Images:', ' ', num2str(floor(ValueSlice)));
 set(handles.tOI,'Visible','on','String',string);
 
+% --------------------------------------------------------------------
 function slider1_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to slider1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -269,8 +261,9 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
 
-% --- Executes during object creation, after setting all properties.
+% --------------------------------------------------------------------
 function listbox1_CreateFcn(hObject, eventdata, handles)
+% --- Executes during object creation, after setting all properties.
 % hObject    handle to listbox1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
@@ -280,16 +273,18 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-% --- Executes on selection change in listbox1.
+% --------------------------------------------------------------------
 function listbox1_Callback(hObject, eventdata, handles)
+% --- Executes on selection change in listbox1.
 % hObject    handle to listbox1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: contents = cellstr(get(hObject,'String')) returns listbox1 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from listbox1
 
-% --- Executes on key press with focus on listbox1 and none of its controls.
+% --------------------------------------------------------------------
 function listbox1_KeyPressFcn(hObject, eventdata, handles)
+% --- Executes on key press with focus on listbox1 and none of its controls.
 % hObject    handle to listbox1 (see GCBO)
 % eventdata  structure with the following fields (see UICONTROL)
 %	Key: name of the key that was pressed, in lower case
@@ -303,10 +298,8 @@ data = list_entries(index_selected);
 data(2:2:length(data))=[];                          %Eliminate separation lines
 
 if  strcmp(eventdata.Key,'c') && strcmp(eventdata.Modifier,'control')
-%     clipboard('copy', data);
     mat2clip(data);                                 %Clipboard() does not copy cell arrays
 end
-% a=4;
 
 % --------------------------------------------------------------------
 function File_data_export_Callback(hObject, eventdata, handles)
@@ -343,8 +336,9 @@ else
 end
 
 
-% --- Executes on button press in pbExit.
+% --------------------------------------------------------------------
 function pbExit_Callback(hObject, eventdata, handles)
+% --- Executes on button press in pbExit.
 % hObject    handle to pbExit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -377,17 +371,20 @@ end
 % clear vid;
  close all;%clear all; %inside closerequest
 
-% --- Executes during object deletion, before destroying properties.
+% --------------------------------------------------------------------
 function figure1_DeleteFcn(hObject, eventdata, handles)
-% % hObject    handle to figure1 (see GCBO)
-% % eventdata  reserved - to be defined in a future version of MATLAB
-% % handles    structure with handles and user data (see GUIDATA)
+% --- Executes during object deletion, before destroying properties.
+% hObject    handle to figure1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 % Exit_Callback(hObject, eventdata, handles)
 global vid
 delete(hObject);
 delete (vid);
-% --- Executes when user attempts to close figure1.
+
+% --------------------------------------------------------------------
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
+% --- Executes when user attempts to close figure1.
 % hObject    handle to figure1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -399,23 +396,25 @@ delete (vid);
 
 
 % --------------------------------------------------------------------
-
 function Settings_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
+% --------------------------------------------------------------------
 function Settings_Distance_Calibation_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Distance_Calibation (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global dist ctrl datastructure
 
+%% Checks
 if isempty(datastructure)
    msgbox('No camera configured. Please configure it in the Camera Setup.','Error'); 
    return; 
 end
 
+%% Show image
 if datastructure.captureimg
     img=datastructure.captureimg;
 else
@@ -423,39 +422,70 @@ else
 end
 figure; imshow(img);hold on;
 
+%% Calculate Frequency parameters for the image
 [Sy Sx]=size(img);
 fft=abs(fftshift(fft2(img))); 
+%fftVisual=log(1+fft); % Just for visualization
 [yy xx] = find(fft==max(max(fft)));
-% figure; imshow(log(fft),[]);hold on; plot(xx, yy,'r+'); %hold off;
 [szy szx]=size(fft); r = [szx/2+20 szy/2-20 200 200];
-Imax = imcrop(fft,r); %figure; imshow(log(Imax),[]);
+Imax = imcrop(fft,r);
 [I]=max(max(Imax));
 [yc,xc]=find(I==Imax,1,'first');
-r=floor(r);xi=r(1);yi=r(2);%jsx=r(3);jsy=r(4);
-xci=xi+xc;yci=yi+yc; plot(xci, yci,'r+');
+r=floor(r);xi=r(1);yi=r(2);
+xci=xi+xc;yci=yi+yc;
 DX = xci - xx;
 
+%% Acquire and show first point
 msgbox('Choose 2 points from the figure for distance calibration','Point Selection');
 uiwait(gcf);
-% axes(gcf);
-h = gca; 
-% axes(handles.axes1);
-% [x,y] = ginput(2);
-% x1=x(1); x2=x(2);
-% y1=y(1); y2=y(2);close;
-[x1,y1] = ginput(1);
+try
+    [x1,y1] = ginput(1);
+catch
+    return; % In case the user closes the figure
+end
+if (isempty(x1) && isempty(y1)) % If user pressed return, exit
+   close;
+   return;
+end
 plot(x1, y1,'r+');
-% x1=x(1); x2=x(2);
-% y1=y(1); y2=y(2);
-SPoint = [x1+48*Sx/DX y1];
+%% Calculate and show a suggestion for the next point
+multiplier = 48;
+dir = 1;
+xSuggestion = x1 + dir * multiplier*Sx/DX;
+
+while (xSuggestion > Sx || xSuggestion < 1)
+    % Attempt to find a suggestion inside the image
+    dir = -dir;
+    if (dir == 1)
+        multiplier = multiplier/2;
+    end
+    xSuggestion = x1 + dir*multiplier*Sx/DX;
+    %if (multiplier == 3 && dir == -1)
+    %    dir = 1;
+    %    xSuggestion = x1 + dir*multiplier*Sx/DX;
+    %    break;
+    %end
+end
+
+SPoint = [xSuggestion y1];
 plot(SPoint(1), SPoint(2),'r+'); hold off;
-[x2,y2] = ginput(1);
+%% Acquire second point and calculate distance
+try
+    [x2,y2] = ginput(1);
+catch
+    return; % In case the user closes the figure
+end
+if (isempty(x2) && isempty(y2)) % If user pressed return, consider the suggestion
+   x2 = SPoint(1); 
+   y2 = SPoint(2);
+end
 close;
 dist=sqrt((x1-x2)^2+(y1-y2)^2);
+%% Show DistanceCalibration form for further input
 DistanceCalibration
 ctrl = 0;
 
-
+% --------------------------------------------------------------------
 function Settings_Select_NI_Device_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Tester_Setup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -463,13 +493,14 @@ function Settings_Select_NI_Device_Callback(hObject, eventdata, handles)
 global devId
 devId = selectNIdevice(); % search for the NI device only when the user opens tester settings
 
-
+% --------------------------------------------------------------------
 function Settings_Tester_Setup_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Tester_Setup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 uiwait(Tester_Settings) % input DAQ settings and image capture frequency
 
+% --------------------------------------------------------------------
 function Settings_Camera_Setup_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Camera_Setup (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -488,7 +519,7 @@ datastructure.captureimg=setupImg;
 datastructure.img=setupImg;
 ShowImage(handles,1,setupImg,[]);
 
-
+% --------------------------------------------------------------------
 function Settings_Select_ROI_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Select_ROI (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -500,8 +531,8 @@ function Settings_Select_ROI_crackROI_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Select_ROI_crackROI (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global rect datastructure
-% img=datastructure.img;
+global rectCrackROI datastructure
+%% Startup checks
 if isempty(datastructure)
    msgbox('Not enough information for ROI selection.', 'Error' );
    return;
@@ -513,27 +544,40 @@ else
     img=datastructure.img(:,:,1);
 end
 
-% MaxSlices=size(img,3);
-% Img=im2double(img(:,:,MaxSlices)); 
-% figure;imshow(img(:,:,1));
+%% Input rectCrackROI
 figure('Name','Crack Region of Interest');imshow(img);
 msgbox('Choose the ROI for the entire crack region','Input region');
 uiwait(gcf);
-rect = getrect; close;
-% msgbox('Choose the ROI for the entire crack region','Input region','modal')
-% rect = getrect(handles.axes1);
-
+rectCrackROI = getrect; close;
+%% Check selected ROI, force it to be inside the image
+if (rectCrackROI(1) < 1)
+    rectCrackROI(3) = rectCrackROI(3) + rectCrackROI(1); % (1) will be negative
+    rectCrackROI(1) = 1;
+end
+if (rectCrackROI(2) < 1)
+    rectCrackROI(4) = rectCrackROI(4) + rectCrackROI(2); % (2) will be negative
+    rectCrackROI(2) = 1;
+end
+if (rectCrackROI(1)+rectCrackROI(3) > size(img,2))
+    rectCrackROI(3) = size(img,2) - rectCrackROI(1);
+end
+if (rectCrackROI(2)+rectCrackROI(4) > size(img,1))
+    rectCrackROI(4) = size(img,1) - rectCrackROI(2);
+end
 
 % --------------------------------------------------------------------
 function Settings_Select_ROI_crackStartROI_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Select_ROI_crackStartROI (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)% --------------------------------------------------------------------
-global rect2 setupImg templateImg datastructure
-
+% handles    structure with handles and user data (see GUIDATA)
+global rectCrackStartROI setupImg templateImg datastructure yPeakOriginal xPeakOriginal rectCrackROI referenceCrackOrigin
+%% Startup checks
 if isempty(datastructure)
    msgbox('Not enough information for ROI selection', 'Error' );
    return;
+elseif isempty(rectCrackROI)
+   msgbox('Please select the Crack ROI first', 'Error' );
+   return; 
 end
 
 if datastructure.captureimg
@@ -541,18 +585,37 @@ if datastructure.captureimg
 else
     img=datastructure.img(:,:,1);
 end
-
-% img=datastructure.img;
-% MaxSlices=size(img,3);
-% Img=im2double(img(:,:,MaxSlices)); 
-% figure;imshow(img(:,:,1));
+%% Input rectCrackStartROI
 figure('Name','Crack Start Region of Interest');imshow(img);
 msgbox('Choose the ROI for the beginning of the crack','Input region');
 uiwait(gcf);
-rect2 = getrect; close; %(handles.axes1);
-templateImg=imcrop(setupImg, rect2);
+rectCrackStartROI = getrect; close;
 
+%% Check selected ROI, force it to be inside the image
+if (rectCrackStartROI(1) < 1)
+    rectCrackStartROI(3) = rectCrackStartROI(3) + rectCrackStartROI(1); % (1) will be negative
+    rectCrackStartROI(1) = 1;
+end
+if (rectCrackStartROI(2) < 1)
+    rectCrackStartROI(4) = rectCrackStartROI(4) + rectCrackStartROI(2); % (2) will be negative
+    rectCrackStartROI(2) = 1;
+end
+if (rectCrackStartROI(1)+rectCrackStartROI(3) > size(img,2))
+    rectCrackStartROI(3) = size(img,2) - rectCrackStartROI(1);
+end
+if (rectCrackStartROI(2)+rectCrackStartROI(4) > size(img,1))
+    rectCrackStartROI(4) = size(img,1) - rectCrackStartROI(2);
+end
+%% Generate template image
+templateImg=imcrop(setupImg, rectCrackStartROI);
+%% Calculate X Y correlation peaks for the original image
+imgROI = im2double(imcrop(img, rectCrackROI));
+cc2 = xcorr2(imgROI, im2double(templateImg));
+cc2 = cc2(size(templateImg,1):(size(cc2,1)),size(templateImg,2):size(cc2,2)); %remove the padding
+[~, imax] = max((cc2(:)));
+[yPeakOriginal, xPeakOriginal] = ind2sub(size(cc2),imax(1));
 
+referenceCrackOrigin = [];
 
 % --------------------------------------------------------------------
 function Images_Callback(hObject, eventdata, handles)
@@ -567,8 +630,6 @@ function Images_GrabImage_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global vid datastructure setupImg
 
-% setVideo;
-% GrabImage(handles,1);
 if isempty(vid)
     msgbox('No video source selected');
    return; 
@@ -583,13 +644,10 @@ catch
 end
 datastructure.captureimg=setupImg;
 datastructure.img=setupImg;
-% setupImg=datastructure.captureimg;
 
 ShowImage(handles,1,setupImg,[]);
-% imwrite(setupImg,'ROI.tif','WriteMode','append');
-% delete(vid);
-% clear vid;
 
+% --------------------------------------------------------------------
 function Settings_Analyse_pre_crack_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -600,21 +658,27 @@ function Settings_Analyse_pre_crack_Morpho_settings_Callback(hObject, eventdata,
 % hObject    handle to Settings_Analyse_pre_crack_Morpho_settings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global ImgProcDataStructure SEImg
+global ImgProcDataStructure SEImg referenceCrackOrigin
 if isempty(SEImg)
     msgbox('No strutural element defined, please go to Determine Structure.', 'Error'); 
     return;
 end
+
+if isempty(referenceCrackOrigin)
+    answer = questdlg('If you proceed, the reference Crack Origin will be automatically calculated.\nDo you want to proceed?','','Yes','No','Yes');
+    if (~strcmp(answer,'Yes'))
+        return;
+    end
+end
+
 uiwait (CrkOpt);
-% DS=ImgProcDataStructure;
-% i=5;
 
 % --------------------------------------------------------------------
 function Settings_Analyse_pre_crack_Images_PCAnalysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Analyse_pre_crack (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rect rect2 pix2mm templateImg 
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg 
 
 if isempty(datastructure)
    msgbox('Not enough information for pre-crack processing', 'Error');
@@ -626,14 +690,11 @@ MaxImg=size(img,3);
 imgC = im2double(img(:,:,MaxImg)); 
 figure; imshow(imgC), hold on
 
-% hr = rectangle('Position',rect, 'LineWidth',1, 'EdgeColor','r');
-h = imrect(gca, rect);
+h = imrect(gca, rectCrackROI);
 addNewPositionCallback(h,@(p) crackAnalysis(imgC, p));
 fcn = makeConstrainToRectFcn('imrect',get(gca,'XLim'),get(gca,'YLim'));
 setPositionConstraintFcn(h,fcn);
-crackAnalysis(imgC,rect);
-
-% crackAnalysis(imgC, rect);
+crackAnalysis(imgC,rectCrackROI);
 
 
 % --------------------------------------------------------------------
@@ -641,7 +702,7 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rect rect2 pix2mm templateImg crackOrigin SEImg
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg crackOrigin SEImg referenceCrackOrigin
 
 if (isempty(datastructure))
     msgbox('No images to analyse.','Error');
@@ -651,7 +712,7 @@ if isempty(pix2mm)
     msgbox('Distance calibration not performed. Please go to the Distance Calibration dialog.','Error');
     return; 
 end
-if (isempty(rect2) || isempty(rect))
+if (isempty(rectCrackStartROI) || isempty(rectCrackROI))
     msgbox('Region of Interest not set. Please go to the ROI Settings dialogs.','Error');
     return; 
 end
@@ -660,14 +721,13 @@ if isempty(SEImg)
     return;
 end
 
-
 %Execution control
 ctrl=0;
+
 %Images
 img=datastructure.img;
 MaxSlices=size(img,3);
 crackdata=zeros(1,MaxSlices);
-% names=zeros(1,MaxSlices);
 names=datastructure.names;
 
 %Crack start algorithm constants for the Harris attribute search 
@@ -696,46 +756,59 @@ if isequal(ctrl,0)
     nowStr = ['Analysis run on: ' char(datetime('now'))];
     fill_listbox([nowStr]);
     fill_listbox('--------------------------------'); 
-else    %if isequal(pix2mm,[])    %== []isequal(pix2mm,'')    
+else
     h = warndlg('You have to set Distance Calibration first!');
     uiwait(h)
-%else
     return;
 end
 
 for i=1:MaxSlices
     imgC = im2double(img(:,:,i)); 
     
-    % The cracks can run to either side, hence...
-    sz=size(imgC);
-    if rect2(1)>sz(2)/2
-        % Crack to the left side
-        difXX = rect(1) + rect(3) - (rect2(1) + rect2(3));
-        rect1 = [rect2(1)-rect2(3) rect(2) 2*rect2(3)+difXX rect2(2)+2*rect2(4)-rect(2)];
-    else
-        %Crack to the right side
-        rect1 = [rect(1) rect(2) rect2(1)-rect(1)+2*rect2(3) rect2(2)-rect(2)+2*rect2(4)];
-    end
+%     % The cracks can run to either side, hence...
+%     sz=size(imgC);
+%     if rectCrackStartROI(1)>sz(2)/2
+%         % Crack to the left side
+%         difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
+%         rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
+%     else
+%         %Crack to the right side
+%         rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
+%     end
+%    
+%     % Find the crack start within 'rect1' ROI
+%     imgROI = imcrop(img(:,:,i), rect1); 
+% % 	[cim, RC, I] = harris(im2double(imgC), sigma, thresh, radius, disp, rect2);
+% %   A = RC(I,:);
+%     cc = normxcorr2(templateImg,imgROI); 
+%     [~, imax] = max(abs(cc(:)));
+%     [ypeak, xpeak] = ind2sub(size(cc),imax(1));
+%     corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
+% 
+%     XX=rect1(1)+corr_offset(2);                  
+%     YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
+%     
+%     crackOrigin=[YY XX];
     
-    % Find the crack start within 'rect1' ROI
-    imgROI = imcrop(img(:,:,i), rect1); 
-% 	[cim, RC, I] = harris(im2double(imgC), sigma, thresh, radius, disp, rect2);
-%   A = RC(I,:);
-    cc = normxcorr2(templateImg,imgROI); 
-    [max_cc, imax] = max(abs(cc(:)));
-    [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-    corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-
-    XX=rect1(1)+corr_offset(2);                  
-    YY=rect1(2)+corr_offset(1)+rect2(4);
     
-    crackOrigin=[YY XX];
+    %% HARRIS
+    % Find the crack start ROI within 'rect1' ROI  
+    correctedCrackStartROI = locateOrigin(imgC,rectCrackROI,rectCrackStartROI,templateImg);
+    
+    % Find crack start inside 'correctedCrackStartROI'
+    [r, c]=harris(im2double(imgC), 1, 0.5, 5, referenceCrackOrigin, correctedCrackStartROI);
+    deltaX = c; deltaY = r;
+    crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
+    
+    figure;    imshow(imgC); hold on; plot(crackOrigin(2),crackOrigin(1),'r+');rectangle('Position',rectCrackStartROI,'EdgeColor','r');rectangle('Position',correctedCrackStartROI,'EdgeColor','b'); hold off;
+    %% 
+    
 %     figure; imshow(imgC), hold on
 %     plot(XX, YY,'r+'), title('corners detected');
 %     rectangle('Position',rect1, 'LineWidth',1, 'EdgeColor','r');
 
     
-	[crckbin, lengthmm] = crackLength(imgC, rect, crackOrigin, pix2mm, false);
+	[crckbin, lengthmm] = crackLength(imgC, rectCrackROI, crackOrigin, pix2mm, false);
     crackdata(i)=lengthmm;
 %     ShowImage(handles,2,crckbin,[]);
 %     names(i)=datastructure.names(i);
@@ -763,10 +836,7 @@ for i=1:MaxSlices
     fill_listbox ('--------------------------------');  
 end
 datastructure.data=crackdata;
-% datacursormode(handles);
-% ctrl =1;
-
-
+msgbox('Analysis complete','');
 
 
 % --------------------------------------------------------------------
@@ -775,13 +845,13 @@ function Test_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-
+% --------------------------------------------------------------------
 function Start_Test_Callback(hObject, eventdata, handles)
 % hObject    handle to Start_Test (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
-       rect rect2 pix2mm templateImg SEImg devId triggerPhase triggerDelay %ni_usb_device
+       rectCrackROI rectCrackStartROI pix2mm templateImg SEImg devId triggerPhase triggerDelay %ni_usb_device
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -798,7 +868,7 @@ if  isempty(testerfreq) || isempty(cyclesperimage)
     return; 
 end
 
-if  isempty(rect2)
+if  isempty(rectCrackStartROI)
     msgbox('Region of Interest not set. Please go to the ROI Settings dialogs.','Error');
     return; 
 end
@@ -862,17 +932,14 @@ end
 tic
 % prevA=[rect2(2)+rect2(4) rect2(1)];
 while halt==0
-% 	if i == 0 tic; end
+    %% Count Cycles
     if ~debug
-        [datachunk,lastPeakTime,lastPeakMag] = CountCycles(true,DAQsamplerate,newnumberofsamples);
-        %data(i*l+1:(i+1)*l)=0;
-        %data(i*l+1+elapseddatapoints:(i+1)*l) = datachunk;
+        [~,lastPeakTime,lastPeakMag] = CountCycles(true,DAQsamplerate,newnumberofsamples);
     else
         pause(cyclesperimage/testerfreq);
     end
-%     plot(handles.axes2,data);
     j=j+cyclesperimage;
-    
+    %% Wait for the right moment to trigger
     if (~debug)
         if (lastPeakMag >= 0)
             lastPeakPhase = pi/2;
@@ -894,53 +961,50 @@ while halt==0
         % trigger Phase
         pause(triggerPhaseDelay - 24*60*60*(now-lastPeakTime) + nCyclesDelay/testerfreq);
     end
+    %% Acquire image
     GrabImage(handles,j);
-% ET2=toc
-%     if i<nrdispcycles i=i+1; end
-%     if i==nrdispcycles 
-%         data(1:(nrdispcycles-1)*l) = data(l+1:nrdispcycles*l);
-%         i=i-1;
-%     end
-% 	[cim, RC, I] = harris(im2double(Img), sigma, thresh, radius, disp, rect2);
-% 	A = harris(im2double(Img), sigma, thresh, radius, rect2);
-
-%     cc = normxcorr2(templateImg,Img); 
-%     [max_cc, imax] = max(abs(cc(:)));
-%     [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-%     corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-%     XX=corr_offset(2); YY=rect2(4)+corr_offset(1);
 
     imgC = im2double(Img); 
     
-% The cracks can run to either side, hence...
-sz=size(imgC);
-if rect2(1)>sz(2)/2
-    % Crack to the left side
-    difXX = rect(1) + rect(3) - (rect2(1) + rect2(3));
-    rect1 = [rect2(1)-rect2(3) rect(2) 2*rect2(3)+difXX rect2(2)+2*rect2(4)-rect(2)];
-else
-    %Crack to the right side
-    rect1 = [rect(1) rect(2) rect2(1)-rect(1)+2*rect2(3) rect2(2)-rect(2)+2*rect2(4)];
-end
-    
-    % Find the crack start within 'rect1' ROI
-    imgROI = imcrop(Img, rect1); 
-    cc = normxcorr2(templateImg,imgROI); 
-    [max_cc, imax] = max(abs(cc(:)));
-    [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-    corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-    XX=rect1(1)+corr_offset(2);                  
-    YY=rect1(2)+corr_offset(1)+rect2(4);
-    A=[YY XX];
-    if k<25                                          % Show detected corner on the first 5 takes
-%         figure; imshow(Img), hold on
-        plot(XX, YY,'r+'), title('corners detected'); %hold off;
-    end
-%     A = RC(I,:)
-	[crckbin, lengthmm] = crackLength(Img, rect, A, pix2mm, true);
-    hold off;
-%     ShowImage(handles,2,crckbin,[]);
+    %% Harris & Find ROI
+    % Find the crack start ROI within 'rect1' ROI  
+    correctedCrackStartROI = locateOrigin(imgC,rectCrackROI,rectCrackStartROI,templateImg);
 
+    % Find crack start inside 'correctedCrackStartROI'
+    [r, c]=harris(imgC, 1, 0.5, correctedCrackStartROI);
+    deltaX = c; deltaY = r;
+    crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
+
+%% Old
+% % The cracks can run to either side, hence...
+% sz=size(imgC);
+% if rectCrackStartROI(1)>sz(2)/2
+%     % Crack to the left side
+%     difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
+%     rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
+% else
+%     %Crack to the right side
+%     rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
+% end
+%     
+%     % Find the crack start within 'rect1' ROI
+%     imgROI = imcrop(Img, rect1); 
+%     cc = normxcorr2(templateImg,imgROI); 
+%     [max_cc, imax] = max(abs(cc(:)));
+%     [ypeak, xpeak] = ind2sub(size(cc),imax(1));
+%     corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
+%     XX=rect1(1)+corr_offset(2);                  
+%     YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
+    
+    %% Show crack origin
+    if k<25                                          % Show detected corner on the first 5 takes
+        plot(crackOrigin(2), crackOrigin(1),'r+'), title('Crack origin detected');
+    end
+    %% Calculate crack length
+	[crckbin, lengthmm] = crackLength(Img, rectCrackROI, crackOrigin, pix2mm, true);
+    hold off;
+    
+    %% Elapsed time calculations
     crackdata(k)=lengthmm;
     names(k)=k*cyclesperimage;
     plot(handles.axes2,names, crackdata,'-+k');
@@ -961,6 +1025,7 @@ end
         elapseddatapoints = 0;
         elapsedcycles=0;
     end
+    %% Update listbox
     fill_listbox ('clc');
 %     fill_listbox (['      Elapsed time = ' num2str(ET,'%4.2f') ' s']);
     fill_listbox (['         Frequency = ' num2str(testerfreq,'%4.2f') ' Hz']);
@@ -984,11 +1049,11 @@ function Stop_Test_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global halt vid
 % closedevice(vid);
-
 halt=1;
 
+% --------------------------------------------------------------------
 function GrabImage(handletofigure,j)
-global vid Img datastructure cyclesperimage rect
+global vid Img datastructure cyclesperimage rectCrackROI
 % tic
 % snapshot = getsnapshot(vid);
 % imwrite(snapshot,['TestImages\File',num2str(j),'.jpg']);
@@ -1004,7 +1069,7 @@ if (F < 1.13 && false)   % If the best focused image is not very good, try to sh
                 % TODO: Select a good limit value.
     H = padarray(2,[1 1]) - fspecial('gaussian'); % Generate unsharpen filter
     tempImg = imfilter(def(:,:,Index),H); % Apply filter
-    newF = fmeasure(tempImg,rect); % Calculate new Focus measurement
+    newF = fmeasure(tempImg,rectCrackROI); % Calculate new Focus measurement
     if  newF > F % If it is an improvement
         def(:,:,Index) = tempImg; % Replace
         %disp(['New value: ',num2str(newF)]);
@@ -1020,6 +1085,7 @@ ShowImage(handletofigure,1,def(:,:,Index),[]); hold on;
 % imwrite(Img,['TestImages\',num2str(j),'.jpg']);
 % ET2=toc
    
+% --------------------------------------------------------------------
 function [datachunk, lastPeakTime, lastPeakMag] = CountCycles(flag,DAQsamplerate,numberofsamples)
 global testerfreq testermag cyclesperimage minimumpeakheight halt devId %ni_usb_device
 % tic
@@ -1089,7 +1155,7 @@ datachunk=data;
 % end
 % ET2=toc
 
-% ________________________________________________
+% --------------------------------------------------------------------
 function [f,mag] = daqdocfft(data,Fs,blocksize)
 %	[F,MAG]=DAQDOCFFT(X,FS,BLOCKSIZE) calculates the FFT of X
 %	using sampling frequency FS and the SamplesPerTrigger provided in BLOCKSIZE
@@ -1103,6 +1169,7 @@ mag = mag(1:floor(blocksize/2));
 f = (0:length(mag)-1)*Fs/blocksize;
 f = f(:);
 
+% --------------------------------------------------------------------
 function setVideo
 global vid src
 %if isempty(vid)
@@ -1129,6 +1196,7 @@ end
 start(vid);
 %trigger(vid);
 
+% --------------------------------------------------------------------
 function ShowImage(handles,AxesType,Img,map)
 axesn=strcat('axes',num2str(AxesType));
 [SizeY SizeX]=size(Img);
@@ -1169,6 +1237,7 @@ else
 	colormap map;   
 end         
          
+% --------------------------------------------------------------------
 function fill_listbox (string2write)
 global listbx
 if strcmp(string2write,'clc') 
@@ -1180,6 +1249,7 @@ end
 listbx.str{end+1} = string2write;
 set(listbx.handle,'String',listbx.str);
 
+% --------------------------------------------------------------------
 function [crckbin, lengthmm] = crackLength(crckimg, cracROI, crackoriginlocation, pix2mm, showBoundingBox)
 
 if (~islogical(showBoundingBox))
@@ -1196,100 +1266,7 @@ if (showBoundingBox)
 end
 hold off;
 
-% function crackAnalysis(crckimg, cracROI, crackOrigin, pix2mm)
-% global SEImg
-% 
-% %Structuring elements for morphological file processing tasks below
-% SESBallOverMLab = strel('ball', 2, -2, 0);
-% 
-% seh = [0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
-%        0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
-%        0 0 0 0 0 0 0 0 0 0 0 0 0; 1 1 1 1 1 1 1 1 1 1 1 1 1;...
-%        1 1 1 1 1 1 1 1 1 1 1 1 1; 1 1 1 1 1 1 1 1 1 1 1 1 1;...
-%        0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
-%        0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
-%        0 0 0 0 0 0 0 0 0 0 0 0 0];
-% 
-% X=crackOrigin(2); 
-% Y=crackOrigin(1);
-% sz=size(crckimg);
-% % Again, the cracks can run to either side...
-% if X>sz(2)/2
-%     cracROI(3)=X-cracROI(1);                        %Crack to the left side
-%     toRight=0;
-% else
-%     cracROI(3)=cracROI(1)+cracROI(3)-X;             %Crack to the right side
-%     cracROI(1)=X;
-%     toRight=1;
-% end    
-% 
-% imgC = im2double(imcrop(crckimg, cracROI));
-% imwrite(crckimg,'ROI.tif','WriteMode','append');
-% imwrite(imgC,'ROI.tif','WriteMode','append');
-% 
-% imCl = imclose(imgC,SESBallOverMLab);
-% imOp = imopen(imCl,SESBallOverMLab);
-% T = imgC - min(imOp,imgC);
-% % imwrite(T,'ROI.tif','WriteMode','append');
-% imAT = adapthisteq(T,'ClipLimit',0.01);
-% % imwrite(imAT,'ROI.tif','WriteMode','append');
-% % imTopH=imtophat(imAT,se);
-% % imwrite(imTopH,'ROI.tif','WriteMode','append');
-% %     
-% Th=1.0;
-% level = Th*graythresh(imAT);
-% bw = im2bw(imAT,level);
-% % imwrite(bw,'ROI.tif','WriteMode','append');
-% % se = strel('line',12,0);
-% se = strel(seh);
-% bw=imclose(bw,se);
-% crckbin=bwareaopen(bw,100);
-% imwrite(crckbin,'ROI.tif','WriteMode','append');
-% 
-% %Crack length calculation
-% %Area Statistics: find the largest connected components area -
-% %represents the crack. Next, find the bounding box of this area and
-% %return its length - the crack projection on the xx axis
-% stats = regionprops(crckbin, 'Area','BoundingBox','Extrema');
-% AreaArray=zeros(1,length(stats));
-% for j=1:length(stats), AreaArray(j) = stats(j).Area; end
-% idxMax = find(max(AreaArray)==AreaArray);
-% 
-% if toRight
-%     TipXX = stats(idxMax).Extrema(3); TipYY = stats(idxMax).Extrema(11);
-%     RootXX = X - cracROI(1); RootYY = Y - cracROI(2);
-%     lengthpix = TipXX - RootXX; heightpix = abs(RootYY - TipYY);
-%     BB = [RootXX RootYY-heightpix lengthpix heightpix];
-% else
-%     TipXX = stats(idxMax).Extrema(8); TipYY = stats(idxMax).Extrema(16);
-%     RootXX = X - cracROI(1); RootYY = Y - cracROI(2);
-%     lengthpix = RootXX - TipXX; heightpix = RootYY - TipYY;
-%     BB = [RootXX-lengthpix RootYY-heightpix lengthpix heightpix];
-% end
-% 
-% % Extract a structuring element, SEImg, from the initial crack.
-% % heightpix=stats(idxMax).BoundingBox(4)+stats(idxMax).BoundingBox(2)-(Y-cracROI(2));
-% % BB=[(X-cracROI(1)) (Y-cracROI(2)) lengthpix heightpix];
-% % BB=[stats(idxMax).BoundingBox(1) stats(idxMax).BoundingBox(2) lengthpix heightpix];
-% thin=imcrop(crckbin, BB);
-% imwrite(thin,'ROI.tif','WriteMode','append');
-% thin=bwmorph(thin,'thin', Inf);
-% imwrite(thin,'ROI.tif','WriteMode','append');
-% [y,x]=find(thin);y=max(y)-y;sy=size(thin,1);sx=size(x,1);
-% % plot(x,y);%hold on;
-% r=robustfit(x,y);
-% % r = regress(y,[ones(size(x),1) x]);
-% SEImg=zeros(sy,sx);line=zeros(1,sx);
-% for i=1:sx
-%    line(i)=ceil(r(1)+r(2)*i); if sy-line(i)<=0 line(i)=sy-1; end
-%    SEImg(sy-line(i),i)=1;
-% end
-% % l=11; h=l; rect=[sx-l+1 sy-h+1 l h];
-% l=19; h=l; % min(sy,l) 
-% rect=[sx/2-l/2 sy/2-h/2 l h];
-% SEImg=imcrop(SEImg, rect);
-% figure; imshow(SEImg);
-    
+% --------------------------------------------------------------------
 function crackAnalysis(crckimg, cracROI)
 global SEImg areaRect
 
@@ -1397,42 +1374,9 @@ imagesc(1:100,1:100,SEImg);
 areaRect = rectangle('Position',[BB(1)+cracROI(1), BB(2)+ cracROI(2), BB(3), BB(4)],'LineWidth',1, 'EdgeColor','r');
 uistack(areaRect,'down',2);
 
-function RC = harris(im, sigma, thresh, radius, rect)
-    dx = [-1 0 1; -1 0 1; -1 0 1]; % Derivative masks
-    dy = dx';
-    Ix = conv2(im, dx, 'same');    % Image derivatives
-    Iy = conv2(im, dy, 'same');    
-    % Generate Gaussian filter of size 6*sigma (+/- 3sigma) and of
-    % minimum size 1x1.
-    g = fspecial('gaussian',max(1,fix(6*sigma)), sigma);
-    
-    Ix2 = conv2(Ix.^2, g, 'same'); % Smoothed squared image derivatives
-    Iy2 = conv2(Iy.^2, g, 'same');
-    Ixy = conv2(Ix.*Iy, g, 'same');
-
-    cim = (Ix2.*Iy2 - Ixy.^2)./(Ix2 + Iy2 + eps); % My preferred  measure.
-    sze = 2*radius+1;                   % Size of mask.
-    mx = ordfilt2(cim,sze^2,ones(sze)); % Grey-scale dilate.
-    cim = (cim==mx)&(cim>thresh);       % Find maxima.
-
-    [r,c] = find(cim);                   % Find row,col coords.
-    r=(r>rect(2) & r<rect(2)+rect(4)).*r;                  % ROI limits.
-    c=(c>rect(1) & c<rect(1)+rect(3)).*c;
-    RC=zeros(length(r),2); %I=1;J=1;
-    for i=1:size(r)
-        if (r(i)>0 && c(i)>0) 
-           RC(i,:)=[r(i) c(i)];
-       end
-    end
-    I=find(RC(:,1))
-	xy=[RC(I,1) RC(I,2)]
-	Ixmax=find(xy==max(xy(:,1)))
-	RC=xy(Ixmax,:)
-%     figure; imshow(im), hold on
-%     plot(RC(1,2),RC(1,1),'r+'), title('corners detected');
-
+% --------------------------------------------------------------------
 function [Index, F] = BestFocusedImage(Imgset)
-global rect
+global rectCrackROI
 % Nr of image files in Imageset
 filesperset =  size(Imgset, ndims(Imgset));
 F = 0;
@@ -1440,7 +1384,7 @@ FM=zeros(filesperset,1);
 
 for f = 1:filesperset
     Img = Imgset(:,:,f);
-    FM(f) = fmeasure(Img, rect);
+    FM(f) = fmeasure(Img, rectCrackROI);
     if FM(f) > F
         F = FM(f);
         Index = f;
@@ -1448,6 +1392,7 @@ for f = 1:filesperset
 end
 %disp(['Best focused image: ', num2str(F)]);
 
+% --------------------------------------------------------------------
  function FM = fmeasure(Image, ROI)
 % HELM - Helmli's mean method (Helmli2001) 
 
@@ -1466,7 +1411,7 @@ FM = 1./R1;
 FM(index) = R1(index);
 FM = mean2(FM);
 
-
+% --------------------------------------------------------------------
 function CrackMonitor_CloseReq(src,callbackdata)
 global halt vid
 if (halt==0)
@@ -1484,3 +1429,21 @@ delete(vid);
 clear vid;
 clear all;
 delete(gcf)
+
+
+% --------------------------------------------------------------------
+function crackOriginCalculation_Callback(hObject, eventdata, handles)
+% hObject    handle to crackOriginCalculation (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global setupImg rectCrackROI
+if (isempty(setupImg))
+   msgbox('No image available','Error');
+   return;
+end
+if isempty(rectCrackROI)
+   msgbox('Please select the Crack Start ROI first', 'Error' );
+   return; 
+end
+
+CrackOrigin

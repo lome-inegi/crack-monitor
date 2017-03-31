@@ -184,41 +184,53 @@ function Analyse_crack(handles)
 % hObject    handle to Settings_Analyse_pre_crack (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global rect rect2 templateImg crackOrigin setupImg
+global rectCrackROI rectCrackStartROI templateImg crackOrigin setupImg referenceCrackOrigin
 
 % imgC=setupImg;
 % MaxImg=size(img,3);
 % imgC = im2double(img(:,:,MaxImg)); 
 
-% The cracks can run to either side, hence...
-sz=size(setupImg);
-if rect2(1)>sz(2)/2
-    % Crack to the left side
-    difXX = rect(1) + rect(3) - (rect2(1) + rect2(3));
-    rect1 = [rect2(1)-rect2(3) rect(2) 2*rect2(3)+difXX rect2(2)+2*rect2(4)-rect(2)];
-else
-    %Crack to the right side
-    rect1 = [rect(1) rect(2) rect2(1)-rect(1)+2*rect2(3) rect2(2)-rect(2)+2*rect2(4)];
-end
+% % The cracks can run to either side, hence...
+% sz=size(setupImg);
+% if rectCrackStartROI(1)>sz(2)/2
+%     % Crack to the left side
+%     difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
+%     rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
+% else
+%     %Crack to the right side
+%     rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
+% end
+% 
+% % Find the crack start within 'rect1' ROI
+% imgROI = imcrop(setupImg, rect1); 
+% cc = normxcorr2(templateImg,imgROI); 
+% [max_cc, imax] = max(abs(cc(:)));
+% [ypeak, xpeak] = ind2sub(size(cc),imax(1));
+% corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
+% 
+% XX=rect1(1)+corr_offset(2);                  
+% YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
+% 
+% crackOrigin=[YY XX];
+% ShowImage(handles,1,setupImg,[]), hold on;
+% plot(XX, YY,'r+'), title('corners detected');
+% rectangle('Position',rect1, 'LineWidth',1, 'EdgeColor','r'); hold off;
+%% Harris & Find ROI
+% Find the crack start ROI within 'rect1' ROI  
+correctedCrackStartROI = locateOrigin(setupImg,rectCrackROI,rectCrackStartROI,templateImg);
 
-% Find the crack start within 'rect1' ROI
-imgROI = imcrop(setupImg, rect1); 
-cc = normxcorr2(templateImg,imgROI); 
-[max_cc, imax] = max(abs(cc(:)));
-[ypeak, xpeak] = ind2sub(size(cc),imax(1));
-corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-
-XX=rect1(1)+corr_offset(2);                  
-YY=rect1(2)+corr_offset(1)+rect2(4);
-
-crackOrigin=[YY XX];
+% Find crack start inside 'correctedCrackStartROI'
+[r, c]=harris(im2double(setupImg), 1, 0.5, 5, referenceCrackOrigin, correctedCrackStartROI);
+deltaX = c; deltaY = r;
+crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
+%% Show result
 ShowImage(handles,1,setupImg,[]), hold on;
-plot(XX, YY,'r+'), title('corners detected');
-rectangle('Position',rect1, 'LineWidth',1, 'EdgeColor','r'); hold off;
+plot(crackOrigin(2), crackOrigin(1),'r+'), title('Crack Origin detected');
+%rectangle('Position',correctedCrackStartROI, 'LineWidth',1, 'EdgeColor','b');
+hold off;
 
-% crackAnalysis(imgC, rect, A, pix2mm);
+
 % ---------------------------------------------------------------------
-
 function edt_ClipLimit_Callback(~, eventdata, handles)
 % hObject    handle to edt_ClipLimit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -226,11 +238,11 @@ function edt_ClipLimit_Callback(~, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edt_ClipLimit as text
 %        str2double(get(hObject,'String')) returns contents of edt_ClipLimit as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 ClipLimit = floor(str2num(get(handles.edt_ClipLimit,'String')));
 set(handles.sld_ClipLimit,'Value',ClipLimit);
 ImgProcDataStructure.ClipLimit = ClipLimit;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_ClipLimit_CreateFcn(hObject, eventdata, handles)
@@ -252,12 +264,12 @@ function sld_ClipLimit_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 ClipLimit = get(handles.sld_ClipLimit,'Value');
 set(handles.edt_ClipLimit,'Value',ClipLimit);
 set(handles.edt_ClipLimit,'String',num2str(ClipLimit));
 ImgProcDataStructure.ClipLimit = ClipLimit;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_ClipLimit_CreateFcn(hObject, eventdata, handles)
@@ -277,7 +289,7 @@ function chkbx_ClipLimit_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_ClipLimit
-global ImgProcDataStructure Defaults crackOrigin setupImg rect
+global ImgProcDataStructure Defaults crackOrigin setupImg rectCrackROI
 
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
@@ -291,7 +303,7 @@ else
     set(handles.edt_ClipLimit,'Enable','off', 'Value',ClipLimit,'String',num2str(ClipLimit));
     set(handles.sld_ClipLimit,'Enable','off', 'Value',ClipLimit);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 
@@ -301,11 +313,11 @@ function edt_THRect_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of edt_THRect as text
 %        str2double(get(hObject,'String')) returns contents of edt_THRect as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 THRect(1) = uint16(floor(str2num(get(handles.edt_THRect,'String'))));
 set(handles.sld_THRect,'Value',THRect(1));
 ImgProcDataStructure.THRect(1) = THRect(1);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_THRect_CreateFcn(hObject, eventdata, handles)
@@ -326,12 +338,12 @@ function sld_THRect_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 THRect(1) = uint16(get(handles.sld_THRect,'Value'));
 set(handles.edt_THRect,'Value',THRect(1));
 set(handles.edt_THRect,'String',num2str(THRect(1)));
 ImgProcDataStructure.THRect(1) = THRect(1);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_THRect_CreateFcn(hObject, eventdata, handles)
@@ -350,7 +362,7 @@ function chkbx_THRect_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_THRect
-global ImgProcDataStructure crackOrigin setupImg rect Defaults
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI Defaults
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
     THRect=ImgProcDataStructure.THRect(1);
@@ -361,7 +373,7 @@ else
     set(handles.edt_THRect,'Enable','off', 'Value',THRect,'String',num2str(THRect));
     set(handles.sld_THRect,'Enable','off', 'Value',THRect);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 
@@ -371,11 +383,11 @@ function edt_GrayThresh_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of edt_GrayThresh as text
 %        str2double(get(hObject,'String')) returns contents of edt_GrayThresh as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 GrayThresh = floor(str2num(get(handles.edt_GrayThresh,'String')));
 set(handles.sld_GrayThresh,'Value',GrayThresh);
 ImgProcDataStructure.GrayThresh = GrayThresh;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_GrayThresh_CreateFcn(hObject, eventdata, handles)
@@ -396,12 +408,12 @@ function sld_GrayThresh_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 GrayThresh = get(handles.sld_GrayThresh,'Value');
 set(handles.edt_GrayThresh,'Value',GrayThresh);
 set(handles.edt_GrayThresh,'String',num2str(GrayThresh));
 ImgProcDataStructure.GrayThresh = GrayThresh;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_GrayThresh_CreateFcn(hObject, eventdata, handles)
@@ -420,7 +432,7 @@ function chkbx_GrayThresh_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_GrayThresh
-global ImgProcDataStructure crackOrigin setupImg rect Defaults
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI Defaults
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
     GrayThresh=ImgProcDataStructure.GrayThresh;
@@ -431,7 +443,7 @@ else
     set(handles.edt_GrayThresh,'Enable','off', 'Value',GrayThresh,'String',num2str(GrayThresh));
     set(handles.sld_GrayThresh,'Enable','off', 'Value',GrayThresh);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 
@@ -441,11 +453,11 @@ function edt_StrelLR_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of edt_StrelLR as text
 %        str2double(get(hObject,'String')) returns contents of edt_StrelLR as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 StrelLR = uint16(floor(str2num(get(handles.edt_StrelLR,'String'))));
 set(handles.sld_StrelLR,'Value',StrelLR);
 ImgProcDataStructure.StrelLR = double(StrelLR);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_StrelLR_CreateFcn(hObject, eventdata, handles)
@@ -466,12 +478,12 @@ function sld_StrelLR_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 StrelLR = uint16(get(handles.sld_StrelLR,'Value'));
 set(handles.edt_StrelLR,'Value',StrelLR);
 set(handles.edt_StrelLR,'String',num2str(StrelLR));
 ImgProcDataStructure.StrelLR = double(StrelLR);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_StrelLR_CreateFcn(hObject, eventdata, handles)
@@ -490,7 +502,7 @@ function chkbx_StrelLR_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_StrelLR
-global ImgProcDataStructure crackOrigin setupImg rect Defaults
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI Defaults
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
     StrelLR=ImgProcDataStructure.StrelLR;
@@ -501,7 +513,7 @@ else
     set(handles.edt_StrelLR,'Enable','off', 'Value',StrelLR,'String',num2str(StrelLR));
     set(handles.sld_StrelLR,'Enable','off', 'Value',StrelLR);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 
@@ -511,11 +523,11 @@ function edt_CloseActions_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of edt_CloseActions as text
 %        str2double(get(hObject,'String')) returns contents of edt_CloseActions as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 CloseActions = uint16(floor(str2num(get(handles.edt_CloseActions,'String'))));
 set(handles.sld_CloseActions,'Value',CloseActions);
 ImgProcDataStructure.CloseActions = CloseActions;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_CloseActions_CreateFcn(hObject, eventdata, handles)
@@ -536,12 +548,12 @@ function sld_CloseActions_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 CloseActions = uint16(get(handles.sld_CloseActions,'Value'));
 set(handles.edt_CloseActions,'Value',CloseActions);
 set(handles.edt_CloseActions,'String',num2str(CloseActions));
 ImgProcDataStructure.CloseActions = CloseActions;
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_CloseActions_CreateFcn(hObject, eventdata, handles)
@@ -560,7 +572,7 @@ function chkbx_CloseActions_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_CloseActions
-global ImgProcDataStructure crackOrigin setupImg rect Defaults
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI Defaults
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
     CloseActions=ImgProcDataStructure.CloseActions;
@@ -571,7 +583,7 @@ else
     set(handles.edt_CloseActions,'Enable','off', 'Value',CloseActions,'String',num2str(CloseActions));
     set(handles.sld_CloseActions,'Enable','off', 'Value',CloseActions);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 
@@ -581,11 +593,11 @@ function edt_SORemov_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'String') returns contents of edt_SORemov as text
 %        str2double(get(hObject,'String')) returns contents of edt_SORemov as a double
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 SORemov = uint16(floor(str2num(get(handles.edt_SORemov,'String'))));
 set(handles.sld_SORemov,'Value',SORemov);
 ImgProcDataStructure.SORemov = double(SORemov);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function edt_SORemov_CreateFcn(hObject, eventdata, handles)
@@ -606,12 +618,12 @@ function sld_SORemov_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-global ImgProcDataStructure crackOrigin setupImg rect
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI
 SORemov = uint16(get(handles.sld_SORemov,'Value'));
 set(handles.edt_SORemov,'Value',SORemov);
 set(handles.edt_SORemov,'String',num2str(SORemov));
 ImgProcDataStructure.SORemov = double(SORemov);
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % --- Executes during object creation, after setting all properties.
 function sld_SORemov_CreateFcn(hObject, eventdata, handles)
@@ -630,7 +642,7 @@ function chkbx_SORemov_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Hint: get(hObject,'Value') returns toggle state of chkbx_SORemov
-global ImgProcDataStructure crackOrigin setupImg rect Defaults
+global ImgProcDataStructure crackOrigin setupImg rectCrackROI Defaults
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
     SORemov=ImgProcDataStructure.SORemov;
@@ -641,7 +653,7 @@ else
     set(handles.edt_SORemov,'Enable','off', 'Value',SORemov,'String',num2str(SORemov));
     set(handles.sld_SORemov,'Enable','off', 'Value',SORemov);
 end
-crckbin(handles,setupImg,rect,crackOrigin);
+crckbin(handles,setupImg,rectCrackROI,crackOrigin);
 
 % ---------------------------------------------------------------------
 

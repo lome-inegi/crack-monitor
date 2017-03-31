@@ -22,7 +22,7 @@ function varargout = Calibration(varargin)
 
 % Edit the above text to modify the response to help Calibration
 
-% Last Modified by GUIDE v2.5 24-Jan-2012 09:42:05
+% Last Modified by GUIDE v2.5 28-Mar-2017 17:15:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -51,7 +51,7 @@ function Calibration_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to Calibration (see VARARGIN)
-global dist pix2mm
+global dist pix2mm temp_pix2mm
 
 % Default pix2mm in case it is []
 
@@ -61,6 +61,7 @@ handles.output = hObject;
 % Update handles structure
 guidata(hObject, handles);
 
+temp_pix2mm = pix2mm;
 if isequal(pix2mm,[])
     return
 else
@@ -93,7 +94,16 @@ function edt_mm_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edt_mm as text
 %        str2double(get(hObject,'String')) returns contents of edt_mm as a double
+global dist temp_pix2mm %pix2mm
 
+Vstr = get(handles.edt_mm, 'String');
+if (~isempty(Vstr))
+    set(handles.edt_Pixelxmm,'String', num2str(dist/str2double(Vstr), '%.2f'));
+    temp_pix2mm = num2str(dist/str2double(Vstr));
+else
+    set(handles.edt_Pixelxmm,'String', '');
+    temp_pix2mm = [];
+end
 
 % --- Executes during object creation, after setting all properties.
 function edt_mm_CreateFcn(hObject, eventdata, handles)
@@ -114,6 +124,15 @@ function edt_Pixelxmm_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edt_Pixelxmm as text
 %        str2double(get(hObject,'String')) returns contents of edt_Pixelxmm as a double
+global dist temp_pix2mm %pix2mm
+
+temp_pix2mm = get(handles.edt_Pixelxmm, 'String');
+if (~isempty(temp_pix2mm))
+    set(handles.edt_mm,'String', num2str(str2double(temp_pix2mm)/dist, '%.2f'));
+else
+    set(handles.edt_mm,'String', '');
+    temp_pix2mm = [];
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -142,9 +161,54 @@ function btn_OK_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_OK (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global dist pix2mm
+global pix2mm temp_pix2mm
 
-Vstr = get(handles.edt_mm, 'String');
-set(handles.edt_Pixelxmm,'String', num2str(dist/str2num(Vstr), '%.2f'));
-pix2mm = num2str(dist/str2num(Vstr));
+%Vstr = get(handles.edt_mm, 'String');
+%set(handles.edt_Pixelxmm,'String', num2str(dist/str2num(Vstr), '%.2f'));
+%pix2mm = num2str(dist/str2num(Vstr));
+if (~isempty(temp_pix2mm))
+    pix2mm = temp_pix2mm;
+end
+close();
 
+
+% --- Executes on key press with focus on edt_mm and none of its controls.
+function edt_mm_KeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to edt_mm (see GCBO)
+% eventdata  structure with the following fields (see MATLAB.UI.CONTROL.UICONTROL)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+if (~strcmp(eventdata.Key, 'return'))
+    import java.awt.Robot; import java.awt.event.*; SimKey=Robot; SimKey.keyPress(java.awt.event.KeyEvent.VK_ENTER); SimKey.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
+end
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over edt_mm.
+function edt_mm_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to edt_mm (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over edt_Pixelxmm.
+function edt_Pixelxmm_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to edt_Pixelxmm (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on key press with focus on edt_Pixelxmm and none of its controls.
+function edt_Pixelxmm_KeyPressFcn(hObject, eventdata, handles)
+% hObject    handle to edt_Pixelxmm (see GCBO)
+% eventdata  structure with the following fields (see MATLAB.UI.CONTROL.UICONTROL)
+%	Key: name of the key that was pressed, in lower case
+%	Character: character interpretation of the key(s) that was pressed
+%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
+% handles    structure with handles and user data (see GUIDATA)
+if (~strcmp(eventdata.Key, 'return'))
+    import java.awt.Robot; import java.awt.event.*; SimKey=Robot; SimKey.keyPress(java.awt.event.KeyEvent.VK_ENTER); SimKey.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
+end
