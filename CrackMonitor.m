@@ -103,7 +103,7 @@ if (isempty(triggerDelay))
 end
 
 if (isempty(ImgOriginDataStructure))
-   ImgOriginDataStructure.originRadius = 5;
+   ImgOriginDataStructure.originRadius = 1;
    ImgOriginDataStructure.radius = 0.5;
    ImgOriginDataStructure.sigma = 1;
 end
@@ -347,10 +347,12 @@ dlg_title = 'Spreadsheet definition';
 num_lines = 1;
 def = {'Slot 1'};
 answer = inputdlg(prompt,dlg_title,num_lines,def);
+h = waitbar(0,'Exporting...');
 A=[datastructure.names; datastructure.data];
 % xlswrite(afile, A', char(answer),  'A1')
 warning('off', 'MATLAB:xlswrite:AddSheet');
 status = xlswrite(afile, A', char(answer),  'A1');
+close(h);
 if status
     msgbox('Export completed');
 else
@@ -790,8 +792,9 @@ else
     uiwait(h)
     return;
 end
-
+h = waitbar(0,'Calculating...');
 for i=1:MaxSlices
+    waitbar(i/MaxSlices,h,['Calculating... [',num2str(names(i)),'/',num2str(names(MaxSlices)),']']);
     imgC = im2double(img(:,:,i)); 
     
 %     % The cracks can run to either side, hence...
@@ -869,6 +872,7 @@ for i=1:MaxSlices
     % fill_listbox (['Projection  angle in XX Axis = ' num2str(angle) ' degrees']);
     fill_listbox ('--------------------------------');  
 end
+close(h);
 datastructure.data=crackdata;
 msgbox('Analysis complete','');
 

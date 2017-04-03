@@ -82,12 +82,13 @@ Defaults = ImgProcDataStructure;
 a=ImgProcDataStructure.ClipLimit;
 min=0;
 max=1;
+set(handles.edt_ClipLimit,'Value',a, ...
+                          'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_ClipLimit,'Min',min, ...
                           'Max',max, ...
                           'SliderStep',[0.005/(max-min) 0.1/(max-min)], ...
                           'Value',a);
-set(handles.edt_ClipLimit,'Value',a, ...
-                          'String',num2str(a));
 set(handles.txt_ClipLimit,'Enable','on');
 set(handles.edt_ClipLimit,'Enable','off');
 set(handles.sld_ClipLimit,'Enable','off');
@@ -97,12 +98,13 @@ set(handles.chkbx_ClipLimit,'Enable','on');
 a=ImgProcDataStructure.THRect(1);%b=ImgProcDataStructure.THRect(2);
 min=2;
 max=50;
+set(handles.edt_THRect,'Value',a, ...
+                       'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_THRect,'Min',min, ...
                        'Max',max, ...
                        'SliderStep',[1/(max-min) 10/(max-min)], ...
                        'Value',a);
-set(handles.edt_THRect,'Value',a, ...
-                       'String',num2str(a));
 set(handles.txt_THRect,'Enable','on');
 set(handles.edt_THRect,'Enable','off');
 set(handles.sld_THRect,'Enable','off');
@@ -112,12 +114,13 @@ set(handles.chkbx_THRect,'Enable','on');
 a=ImgProcDataStructure.GrayThresh;
 min=0.5;
 max=2.5;
+set(handles.edt_GrayThresh,'Value',a, ...
+                           'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_GrayThresh,'Min',min, ...
                            'Max',max, ...
                            'SliderStep',[0.01/(max-min) 0.5/(max-min)], ...
                            'Value',a);
-set(handles.edt_GrayThresh,'Value',a, ...
-                           'String',num2str(a));
 set(handles.txt_GrayThresh,'Enable','on');
 set(handles.edt_GrayThresh,'Enable','off');
 set(handles.sld_GrayThresh,'Enable','off');
@@ -127,12 +130,13 @@ set(handles.chkbx_GrayThresh,'Enable','on');
 a=ImgProcDataStructure.StrelLR;
 min=1;
 max=10;
+set(handles.edt_StrelLR,'Value',a, ...
+                        'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_StrelLR,'Min',min, ...
                         'Max',max, ...
                         'SliderStep',[1/(max-min) 10/(max-min)], ...
                         'Value',a);
-set(handles.edt_StrelLR,'Value',a, ...
-                        'String',num2str(a));
 set(handles.txt_StrelLR,'Enable','on');
 set(handles.edt_StrelLR,'Enable','off');
 set(handles.sld_StrelLR,'Enable','off');
@@ -142,12 +146,13 @@ set(handles.chkbx_StrelLR,'Enable','on');
 a=ImgProcDataStructure.CloseActions;
 min=1;
 max=5;
+set(handles.edt_CloseActions,'Value',a, ...
+                             'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_CloseActions,'Min',min, ...
                              'Max',max, ...
                              'SliderStep',[1/(max-min) 2/(max-min)], ...
                              'Value',a);
-set(handles.edt_CloseActions,'Value',a, ...
-                             'String',num2str(a));
 set(handles.txt_CloseActions,'Enable','on');
 set(handles.edt_CloseActions,'Enable','off');
 set(handles.sld_CloseActions,'Enable','off');
@@ -157,12 +162,13 @@ set(handles.chkbx_CloseActions,'Enable','on');
 a=ImgProcDataStructure.SORemov;
 min=50;
 max=500;
+set(handles.edt_SORemov,'Value',a, ...
+                        'String',num2str(a));
+if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_SORemov,'Min',min, ...
                         'Max',max, ...
                         'SliderStep',[10/(max-min) 50/(max-min)], ...
                         'Value',a);
-set(handles.edt_SORemov,'Value',a, ...
-                        'String',num2str(a));
 set(handles.txt_SORemov,'Enable','on');
 set(handles.edt_SORemov,'Enable','off');
 set(handles.sld_SORemov,'Enable','off');
@@ -410,7 +416,9 @@ function sld_GrayThresh_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
-GrayThresh = get(handles.sld_GrayThresh,'Value');
+minRes = 0.01;
+GrayThresh = floor(get(handles.sld_GrayThresh,'Value') / minRes) * minRes;
+%GrayThresh = get(handles.sld_GrayThresh,'Value');
 set(handles.edt_GrayThresh,'Value',GrayThresh);
 set(handles.edt_GrayThresh,'String',num2str(GrayThresh));
 ImgProcDataStructure.GrayThresh = GrayThresh;

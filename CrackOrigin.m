@@ -59,7 +59,7 @@ handles.output = hObject;
 guidata(hObject, handles);
 if (isempty(ImgOriginDataStructure))
     disp('Setting default values in CrackOrigin.m');
-    ImgOriginDataStructure.originRadius = 5;
+    ImgOriginDataStructure.originRadius = 1;
     ImgOriginDataStructure.radius = 0.5;
     ImgOriginDataStructure.sigma = 1;
 end
@@ -77,12 +77,12 @@ DefaultsOrigin = ImgOriginDataStructure;
 
 % originRadius
 a=ImgOriginDataStructure.originRadius;
-min=1;
+min=0;
 max=20;
 if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_originRadius,'Min',min, ...
                            'Max',max, ...
-                           'SliderStep',[min/(max-min) 10/(max-min)], ...
+                           'SliderStep',[0.5/(max-min) 10/(max-min)], ...
                            'Value',a);
 set(handles.edt_originRadius,'Value',a, ...
                            'String',num2str(a));
@@ -149,10 +149,10 @@ if datastructure.captureimg
 else
     img=datastructure.img(:,:,1);
 end
-minRes = 1;
+minRes = 0.5;
 originRadius = get(handles.sld_originRadius,'Value');
 originRadius = double(uint16(originRadius / minRes)) * minRes; % Only allow values multiple of 0.5
-if (originRadius < minRes)
+if (originRadius < 0) % Here min ~= minRes!!
     originRadius = minRes;
 end
 set(handles.sld_originRadius,'Value',originRadius);
