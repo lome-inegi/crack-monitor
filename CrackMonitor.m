@@ -244,8 +244,8 @@ function File_Close_All_Callback(hObject, eventdata, handles)
 % hObject    handle to File_Close_All (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-%global datastructure referenceCrackOrigin setupImg SEImg 
-global areaRect crackdata crackLength crackOrigin_CrkOpt ctrl cyclesperimage datastructure Defaults DefaultsOrigin device devId dist halt Img ImgOriginDataStructure ImgProcDataStructure listbx minimumpeakheight mm ni pix rectCrackROI rectCrackStartROI referenceCrackOrigin SEImg setupImg src templateImg tempReferenceCrackOrigin testerfreq testermag triggerDelay triggerPhase usb ValueSlice vid xPeakOriginal yPeakOriginal
+global datastructure referenceCrackOrigin tempReferenceCrackOrigin setupImg ValueSlice  
+%global areaRect crackdata crackLength crackOrigin_CrkOpt ctrl cyclesperimage datastructure Defaults DefaultsOrigin device devId dist halt Img ImgOriginDataStructure ImgProcDataStructure listbx minimumpeakheight mm ni pix rectCrackROI rectCrackStartROI referenceCrackOrigin SEImg setupImg src templateImg tempReferenceCrackOrigin testerfreq testermag triggerDelay triggerPhase usb ValueSlice vid xPeakOriginal yPeakOriginal
 %img=datastructure.img;
 datastructure.img=[];%zeros(size(img),'uint8');
 
