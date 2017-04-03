@@ -355,7 +355,7 @@ close
 % Process -------------------------------------------------------------
 
 function getCrackOrigin(handles, im)
-global ImgOriginDataStructure rectCrackStartROI ImgOriginTempData referenceCrackOrigin tempReferenceCrackOrigin
+global ImgOriginDataStructure rectCrackStartROI referenceCrackOrigin tempReferenceCrackOrigin
 
 set(handles.messages,'String','');
 sigma = ImgOriginDataStructure.sigma;
@@ -363,7 +363,6 @@ radius = ImgOriginDataStructure.radius;
 originRadius = ImgOriginDataStructure.originRadius;
 
 im = im2double(im);
-ImgOriginTempData.im = im;
 [r,c] = harris(im,sigma,radius,originRadius,referenceCrackOrigin,rectCrackStartROI);
 ShowImage(handles,1,im,[]);
 hold on;

@@ -146,7 +146,16 @@ for n = 1:length(filenames)
         disp('RGB image loaded, converting to grayscale.');
         img(:,:,n) = rgb2gray(tempImg);
     end
-    names(n)=str2double(name);
+    if (isnan(str2double(name)))
+        if (n > 1)
+            names(n) = names(n-1) + 1;
+        else
+            names(n) = n;
+        end
+    else
+        names(n)=str2double(name);
+    end
+    
 end
 
 datastructure.names = names;
@@ -235,16 +244,23 @@ function File_Close_All_Callback(hObject, eventdata, handles)
 % hObject    handle to File_Close_All (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure 
-
-img=datastructure.img;
-datastructure.img=zeros(size(img),'uint8');
+%global datastructure referenceCrackOrigin setupImg SEImg 
+global areaRect crackdata crackLength crackOrigin_CrkOpt ctrl cyclesperimage datastructure Defaults DefaultsOrigin device devId dist halt Img ImgOriginDataStructure ImgProcDataStructure listbx minimumpeakheight mm ni pix rectCrackROI rectCrackStartROI referenceCrackOrigin SEImg setupImg src templateImg tempReferenceCrackOrigin testerfreq testermag triggerDelay triggerPhase usb ValueSlice vid xPeakOriginal yPeakOriginal
+%img=datastructure.img;
+datastructure.img=[];%zeros(size(img),'uint8');
 
 % ======= Reset Slider, file set and axes ========
 cla(handles.axes1,'reset');
 set(handles.axes1,'Visible','off');
 set(handles.tOI,'Visible','off');
 set(handles.slider1,'Visible','off');
+
+referenceCrackOrigin = [];
+tempReferenceCrackOrigin = [];
+setupImg = [];
+ValueSlice = 1;
+%datastructure = [];
+%SEImg = [];
 
 % --------------------------------------------------------------------
 function slider1_Callback(hObject, eventdata, handles)
@@ -708,7 +724,7 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg crackOrigin SEImg referenceCrackOrigin ImgOriginDataStructure
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg SEImg referenceCrackOrigin ImgOriginDataStructure
 
 if (isempty(datastructure))
     msgbox('No images to analyse.','Error');
@@ -810,7 +826,12 @@ for i=1:MaxSlices
     
     % Find crack start inside 'correctedCrackStartROI'
     [r, c]=harris(im2double(imgC), ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);
-    deltaX = c; deltaY = r;
+    
+    if (isempty(c) || isempty(r))
+       deltaX = referenceCrackOrigin(2); deltaY = referenceCrackOrigin(1);
+    else
+        deltaX = c; deltaY = r;
+    end
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
     %harrisfigure
     %figure;    imshow(imgC); hold on; plot(crackOrigin(2),crackOrigin(1),'r+');rectangle('Position',rectCrackStartROI,'EdgeColor','r');rectangle('Position',correctedCrackStartROI,'EdgeColor','b'); hold off;
