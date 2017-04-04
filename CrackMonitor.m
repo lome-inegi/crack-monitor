@@ -809,9 +809,13 @@ else
     return;
 end
 h = waitbar(0,'Calculating...');
-fig1=figure(99);
-fig1axes = axes;
-hold on;
+
+saveFigures = false;
+if (saveFigures)
+    fig1 = figure(99);
+    fig1axes = axes;
+    hold on;
+end
 for i=1:MaxSlices
     try
         waitbar(i/MaxSlices,h,['Calculating... [',num2str(names(i)),'/',num2str(names(MaxSlices)),']']);
@@ -862,37 +866,17 @@ for i=1:MaxSlices
     end
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
     %harrisfigure
-    cla(fig1axes);
-    imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
-    
-    export_fig(['output/', num2str(i), '_origin.jpg'],fig1);
+    if (saveFigures)
+        cla(fig1axes);
+        imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
+        export_fig(['output/', num2str(i), '_origin.jpg'],fig1);
+    end
     %% 
-    
-%     figure; imshow(imgC), hold on
-%     plot(XX, YY,'r+'), title('corners detected');
-%     rectangle('Position',rect1, 'LineWidth',1, 'EdgeColor','r');
-
-    
-	[crckbin, lengthmm] = crackLength(imgC, rectCrackROI, crackOrigin, pix2mm, false);
+        
+	[~, lengthmm] = crackLength(imgC, rectCrackROI, crackOrigin, pix2mm, false);
     crackdata(i)=lengthmm;
-%     ShowImage(handles,2,crckbin,[]);
-%     names(i)=datastructure.names(i);
     plot(handles.axes2,names, crackdata,'-.k');
 
-%      ShowImage(handles,2,bw,[]);
-   % imgCrack = imgC<101;
-    % imgCrackMedian = medfilt2(imgCrack, [3 3]);
-    % imgLabel = bwlabel(imgCrackMedian);
-    % stats = regionprops(imgLabel, 'all');
-    % for i=1:length(stats), AreaArray(i) = stats(i).Area; end
-    % idxMax = find(max(AreaArray)==AreaArray);
-    % [y x]= find(imgLabel==idxMax);
-    % axes(handles.axes2);
-    % hold on
-    % plot(x,y,'b')
-    % plot([x(1) x(length(x))],[y(1) y(1)],'r*');
-    % plot(x(1):x(length(x)),y(1),'r');
-    % hold off
     % Write in ListBox
     fill_listbox (['Distance in X axis     = ' num2str(lengthmm) ' mm']);
     % fill_listbox (['Perimeter     = ' num2str(stats(idxMax).Perimeter) ' px']);
@@ -902,7 +886,9 @@ for i=1:MaxSlices
 end
 referenceCrackOrigin = [];
 close(h);
-close(fig1);
+if (saveFigures)
+    close(fig1);
+end
 datastructure.data=crackdata;
 msgbox('Analysis complete','');
 
@@ -930,8 +916,7 @@ global testerfreq testermag cyclesperimage vid halt Img datastructure...
 % radius = 1;
 % disp = 1;
 
-%%%%%Here we should have a verification. If some variable is not set, warn
-%%%%%the user and exit
+%% Startup verifications
 if  isempty(testerfreq) || isempty(cyclesperimage)
     msgbox('Tester parameters not set. Please go to the Tester Settings dialog.','Error');
     return; 
@@ -956,10 +941,11 @@ if isempty(vid) || ~isvalid(vid)
     msgbox('Video not available. Please go to the Camera Settings dialog.','Error');
    return; 
 end
-%%%%%
-%%%%%
+
+%% Start video
 setVideo;
 
+%% Initial setup
 halt=0;
 nrdispcycles = 5;
 % Sample rate for DAQ. The global "testerfreq" is updated in "CountCycles"
@@ -983,10 +969,9 @@ TotalCycles=0;
 newnumberofsamples = numberofsamples;
 elapseddatapoints = 0;
 
+%% Verify NI DAQ
 debug=false;
-%%devId = find_ni_usb(ni_usb_device);
-%devId = selectNIdevice();
-if isempty(devId)%strcmp(devId,'')
+if isempty(devId)
     debugAns=questdlg('No NI DAQ selected, do you want to do a debug session?','NI DAQ','Yes','No','Configure','Yes');
     if (strcmp(debugAns,'Yes'))
        debug=true;
@@ -998,8 +983,8 @@ if isempty(devId)%strcmp(devId,'')
     end
 end
 
+%% Main cycle
 tic
-% prevA=[rect2(2)+rect2(4) rect2(1)];
 while halt==0
     %% Count Cycles
     if ~debug
@@ -1017,8 +1002,6 @@ while halt==0
             % This will never happen unless the code is changed. (findpeaks
             % only searches for maxima.
         end
-        %triggerDelay = 0.1; % Time it takes from trigger to action
-        %(photo). % Now user definable.
         % Aprox to 100ms. If instead of an image we grab samples from NI's 
         % DAQ, it works with around 100 ms margin. I measured the time 
         % startForeground() took to complete, and it took around 100 ms
@@ -1040,37 +1023,23 @@ while halt==0
     correctedCrackStartROI = locateOrigin(imgC,rectCrackROI,rectCrackStartROI,templateImg);
 
     % Find crack start inside 'correctedCrackStartROI'
-    [r, c]=harris(imgC, ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);
-    deltaX = c; deltaY = r;
+    [r, c]=harris(imgC, ImgOriginDataStructure.sigma, ImgOriginDataStructure.radius, ImgOriginDataStructure.originRadius, referenceCrackOrigin, correctedCrackStartROI);   
+    if (isempty(c) || isempty(r))
+       deltaX = referenceCrackOrigin(2); deltaY = referenceCrackOrigin(1);
+    else
+        deltaX = c; deltaY = r;
+        referenceCrackOrigin(2) = deltaX;
+        referenceCrackOrigin(1) = deltaY;
+    end
+    
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
 
-%% Old
-% % The cracks can run to either side, hence...
-% sz=size(imgC);
-% if rectCrackStartROI(1)>sz(2)/2
-%     % Crack to the left side
-%     difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
-%     rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
-% else
-%     %Crack to the right side
-%     rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
-% end
-%     
-%     % Find the crack start within 'rect1' ROI
-%     imgROI = imcrop(Img, rect1); 
-%     cc = normxcorr2(templateImg,imgROI); 
-%     [max_cc, imax] = max(abs(cc(:)));
-%     [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-%     corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-%     XX=rect1(1)+corr_offset(2);                  
-%     YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
-    
     %% Show crack origin
     if k<25                                          % Show detected corner on the first 5 takes
         plot(crackOrigin(2), crackOrigin(1),'r+'), title('Crack origin detected');
     end
     %% Calculate crack length
-	[crckbin, lengthmm] = crackLength(Img, rectCrackROI, crackOrigin, pix2mm, true);
+	[~, lengthmm] = crackLength(Img, rectCrackROI, crackOrigin, pix2mm, true);
     hold off;
     
     %% Elapsed time calculations
@@ -1096,7 +1065,6 @@ while halt==0
     end
     %% Update listbox
     fill_listbox ('clc');
-%     fill_listbox (['      Elapsed time = ' num2str(ET,'%4.2f') ' s']);
     fill_listbox (['         Frequency = ' num2str(testerfreq,'%4.2f') ' Hz']);
     fill_listbox (['         Magnitude = ' num2str(testermag,'%4.2f') ' V']);
     fill_listbox (['Elapsed #cycles = ' num2str(elapsedcycles,'%6.0f')]);
@@ -1105,7 +1073,7 @@ while halt==0
     fill_listbox (['           #cycles = ' num2str(TotalCycles,'%6.0f')]);
 	fill_listbox (['Distance in X axis = ' num2str(lengthmm) ' mm']);
 end
-
+%% Complete
 datastructure.data=crackdata;
 datastructure.names=names;
 msgbox('Test completed.');
