@@ -128,7 +128,7 @@ global dist temp_pix2mm %pix2mm
 
 temp_pix2mm = get(handles.edt_Pixelxmm, 'String');
 if (~isempty(temp_pix2mm))
-    set(handles.edt_mm,'String', num2str(str2double(temp_pix2mm)/dist, '%.2f'));
+    set(handles.edt_mm,'String', num2str(dist/str2double(temp_pix2mm), '%.2f'));
 else
     set(handles.edt_mm,'String', '');
     temp_pix2mm = [];

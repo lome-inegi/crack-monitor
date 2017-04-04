@@ -129,14 +129,21 @@ function File_Callback(hObject, eventdata, handles)
 function File_Load_Callback(hObject, eventdata, handles)
 global ValueSlice datastructure setupImg ctrl
 
+
 [filenames, pathname] = uigetfile({'*.jpg';'*.tif';'*.gif';'*.*'},'MultiSelect', 'on');
 if isequal(filenames, 0)
     return
 end
- 
+
+h = waitbar(0,'Loading...');
 filenames = cellstr(filenames);  
 names=zeros(1,length(filenames));
 for n = 1:length(filenames)
+    try
+        waitbar(n/(length(filenames)),h,['Loading... [',num2str(n),'/',num2str(length(filenames)),']' ]);
+    catch
+        h = waitbar(n/(length(filenames)),'Loading...');
+    end
     afile = fullfile(pathname, filenames{n});
     [~, name, ~] = fileparts(afile);
     tempImg = imread(afile);
@@ -185,6 +192,7 @@ set(handles.tOI,'Visible','on','String',string);
 % set(handles.slider1,'Visible','on');
 setupImg = datastructure.img(:,:,ValueSlice);
 ShowImage(handles,1,datastructure.img(:,:,ValueSlice),[]);
+close(h);
 
 % --------------------------------------------------------------------
 function File_Save_Callback(hObject, eventdata, handles)
@@ -347,6 +355,10 @@ dlg_title = 'Spreadsheet definition';
 num_lines = 1;
 def = {'Slot 1'};
 answer = inputdlg(prompt,dlg_title,num_lines,def);
+if (isempty(answer) && iscell(answer))
+    msgbox('Export cancelled');
+   return; 
+end
 h = waitbar(0,'Exporting...');
 A=[datastructure.names; datastructure.data];
 % xlswrite(afile, A', char(answer),  'A1')
@@ -555,7 +567,7 @@ function Settings_Select_ROI_crackROI_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Select_ROI_crackROI (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global rectCrackROI datastructure
+global rectCrackROI datastructure rectCrackStartROI
 %% Startup checks
 if isempty(datastructure)
    msgbox('Not enough information for ROI selection.', 'Error' );
@@ -588,6 +600,7 @@ end
 if (rectCrackROI(2)+rectCrackROI(4) > size(img,1))
     rectCrackROI(4) = size(img,1) - rectCrackROI(2);
 end
+rectCrackStartROI = [];
 
 % --------------------------------------------------------------------
 function Settings_Select_ROI_crackStartROI_Callback(hObject, eventdata, handles)
@@ -709,6 +722,8 @@ if isempty(datastructure)
    return;
 end
 
+hWaitbar = waitbar(0,'Calculating...');
+
 img=datastructure.img;
 MaxImg=size(img,3);
 imgC = im2double(img(:,:,MaxImg)); 
@@ -719,6 +734,7 @@ addNewPositionCallback(h,@(p) crackAnalysis(imgC, p));
 fcn = makeConstrainToRectFcn('imrect',get(gca,'XLim'),get(gca,'YLim'));
 setPositionConstraintFcn(h,fcn);
 crackAnalysis(imgC,rectCrackROI);
+close(hWaitbar);
 
 
 % --------------------------------------------------------------------
@@ -793,8 +809,15 @@ else
     return;
 end
 h = waitbar(0,'Calculating...');
+fig1=figure(99);
+fig1axes = axes;
+hold on;
 for i=1:MaxSlices
-    waitbar(i/MaxSlices,h,['Calculating... [',num2str(names(i)),'/',num2str(names(MaxSlices)),']']);
+    try
+        waitbar(i/MaxSlices,h,['Calculating... [',num2str(names(i)),'/',num2str(names(MaxSlices)),']']);
+    catch
+        h = waitbar(i/MaxSlices,'Calculating...');
+    end
     imgC = im2double(img(:,:,i)); 
     
 %     % The cracks can run to either side, hence...
@@ -834,10 +857,15 @@ for i=1:MaxSlices
        deltaX = referenceCrackOrigin(2); deltaY = referenceCrackOrigin(1);
     else
         deltaX = c; deltaY = r;
+        referenceCrackOrigin(2) = deltaX;
+        referenceCrackOrigin(1) = deltaY;
     end
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
     %harrisfigure
-    %figure;    imshow(imgC); hold on; plot(crackOrigin(2),crackOrigin(1),'r+');rectangle('Position',rectCrackStartROI,'EdgeColor','r');rectangle('Position',correctedCrackStartROI,'EdgeColor','b'); hold off;
+    cla(fig1axes);
+    imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
+    
+    export_fig(['output/', num2str(i), '_origin.jpg'],fig1);
     %% 
     
 %     figure; imshow(imgC), hold on
@@ -872,7 +900,9 @@ for i=1:MaxSlices
     % fill_listbox (['Projection  angle in XX Axis = ' num2str(angle) ' degrees']);
     fill_listbox ('--------------------------------');  
 end
+referenceCrackOrigin = [];
 close(h);
+close(fig1);
 datastructure.data=crackdata;
 msgbox('Analysis complete','');
 

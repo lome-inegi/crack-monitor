@@ -122,7 +122,10 @@ if toRight
     lengthpix = TipXX - (X-cracROI(1));
 else
     TipXX = stats(idxMax).Extrema(8);
-    lengthpix = (X-cracROI(1)) - TipXX; 
+    lengthpix = (X-cracROI(1)) - TipXX;
 end
-
+ % Usually, tipXX is a value half pixel to the left/right of the outermost
+ % pixel, that is, up to the border between that pixel and the next and X
+ % is the center of the pixel. This means that lengthpix won't be a round
+ % number.
 BoundingBox=stats(idxMax).BoundingBox;

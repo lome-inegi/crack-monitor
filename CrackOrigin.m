@@ -51,7 +51,7 @@ function CrackOrigin_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackOrigin (see VARARGIN)
-global DefaultsOrigin datastructure ImgOriginDataStructure
+global DefaultsOrigin datastructure ImgOriginDataStructure rectCrackStartROI
 % Choose default command line output for CrackOrigin
 handles.output = hObject;
 
@@ -78,7 +78,7 @@ DefaultsOrigin = ImgOriginDataStructure;
 % originRadius
 a=ImgOriginDataStructure.originRadius;
 min=0;
-max=20;
+max = floor(sqrt((rectCrackStartROI(3)/2).^2+(rectCrackStartROI(4)/2).^2));
 if (a<min), a=min; end; if(a>max), a=max; end;
 set(handles.sld_originRadius,'Min',min, ...
                            'Max',max, ...
