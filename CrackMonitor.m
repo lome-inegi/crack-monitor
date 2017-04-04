@@ -1084,16 +1084,12 @@ function Stop_Test_Callback(hObject, eventdata, handles)
 % hObject    handle to Stop_Test (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global halt vid
-% closedevice(vid);
+global halt
 halt=1;
 
 % --------------------------------------------------------------------
 function GrabImage(handletofigure,j)
 global vid Img datastructure cyclesperimage rectCrackROI
-% tic
-% snapshot = getsnapshot(vid);
-% imwrite(snapshot,['TestImages\File',num2str(j),'.jpg']);
 if isempty(vid)
     return;
 end
@@ -1102,31 +1098,25 @@ def= getdata(vid,5,'single');
 [Index, F] = BestFocusedImage(def);
 disp(['Selected image ', num2str(Index)]);
 if (F < 1.13 && false)   % If the best focused image is not very good, try to sharpen it
-                % Maybe let the user define the limit value?
-                % TODO: Select a good limit value.
+                        % Maybe let the user define the limit value?
+                        % TODO: This is disabled! Select a good limit value.
     H = padarray(2,[1 1]) - fspecial('gaussian'); % Generate unsharpen filter
     tempImg = imfilter(def(:,:,Index),H); % Apply filter
     newF = fmeasure(tempImg,rectCrackROI); % Calculate new Focus measurement
     if  newF > F % If it is an improvement
         def(:,:,Index) = tempImg; % Replace
-        %disp(['New value: ',num2str(newF)]);
     end
 end
 datastructure.captureimg=def(:,:,Index);
-% for i=1:5
-% imwrite(def(:,:,i),['TestImages\',num2str(j+i),'.jpg']);
-% end
 imwrite(def(:,:,Index),[num2str(j),'.jpg']);
 Img=def(:,:,Index);
 ShowImage(handletofigure,1,def(:,:,Index),[]); hold on;
-% imwrite(Img,['TestImages\',num2str(j),'.jpg']);
-% ET2=toc
+
    
 % --------------------------------------------------------------------
 function [datachunk, lastPeakTime, lastPeakMag] = CountCycles(flag,DAQsamplerate,numberofsamples)
 global testerfreq testermag cyclesperimage minimumpeakheight halt devId %ni_usb_device
-% tic
-if isempty(devId)%strcmp(devId,'')
+if isempty(devId)
    return; 
 end
 s = [];
@@ -1142,14 +1132,9 @@ ch(1).TerminalConfig = 'Differential';
 ch(1).Range = [-10.0 10.0];
 s.Rate = DAQsamplerate;
 s.DurationInSeconds = numberofsamples/DAQsamplerate;
-%addchannel(ai,0);                                   % add analog input channel 0
-%set(ai, 'InputType', 'Differential'); 
-%set(ai, 'SampleRate', DAQsamplerate);               % in Hertz
-%set(ai, 'SamplesPerTrigger', numberofsamples);  
 
 [data, timestamps, triggerTime] = startForeground(s);
-%start(ai);
-%data = getdata(ai);
+
 [peaks, locs] = findpeaks(data,'MINPEAKHEIGHT',minimumpeakheight,'NPEAKS',cyclesperimage);
 
 % Stop the test if there's no data on the DAQ
@@ -1167,16 +1152,9 @@ lastPeakMag = data(lastPeakLoc);
 if flag
 %	Zero-pad to increase #bins and frequency resolution
     data1=wextend('1D','zpd',data,32*numberofsamples,'r');
-%	data1=data1.*flattopwin(length(data1));
-%	data1=data1.*hann(numberofsamples+2*512);
     [f,mag] = daqdocfft(data1,DAQsamplerate,33*numberofsamples);
     [ymax,maxindex]= max(mag);
 
-%   Em alternativa... 
-%   Y = fft(data1);
-%   [~,index] = max(abs(Y(1:numberofsamples/2+1)));
-%   freq = 0:(DAQsamplerate/numberofsamples):DAQsamplerate/2;
-    
 %   Updates the global variable "testerfreq"
     testerfreq=f(maxindex);    %freq(index)
 	testermag=mean(peaks);   %mag(maxindex);    %magnitude(index)
@@ -1184,13 +1162,8 @@ if flag
 end
 
 datachunk=data;
-% if halt
-    %stop(ai);
-    %delete(ai);
-    release(s);
-    delete(s);
-% end
-% ET2=toc
+release(s);
+delete(s);
 
 % --------------------------------------------------------------------
 function [f,mag] = daqdocfft(data,Fs,blocksize)
