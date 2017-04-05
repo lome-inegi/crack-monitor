@@ -4,10 +4,11 @@ function [ crackROIUpdate ] = locateOrigin( img, crackROI, crackStartROI, templa
 global xPeakOriginal yPeakOriginal
     % Find the crack start within the 'cracROI' ROI
     imgROI = im2double(imcrop(img, crackROI)); 
-
+    nimg = imgROI - mean(mean(imgROI));
     %cc = normxcorr2(templateImg,imgROI);
     %cc = cc(size(templateImg,1):(size(cc,1)),size(templateImg,2):size(cc,2)); %remove the padding
-    cc2 = xcorr2(imgROI, im2double(templateImg));
+    %cc2 = xcorr2(imgROI, im2double(templateImg));
+    cc2 = xcorr2(nimg,templateImg);
     cc2 = cc2(size(templateImg,1):(size(cc2,1)),size(templateImg,2):size(cc2,2)); %remove the padding
    
     [~, imax] = max((cc2(:)));

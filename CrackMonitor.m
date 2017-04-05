@@ -22,7 +22,7 @@ function varargout = CrackMonitor(varargin)
 
 % Edit the above text to modify the response to help CrackMonitor
 
-% Last Modified by GUIDE v2.5 31-Mar-2017 14:58:59
+% Last Modified by GUIDE v2.5 05-Apr-2017 14:46:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase triggerDelay
+global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase triggerDelay saveOriginFigures
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -94,6 +94,9 @@ ImgProcDataStructure.SORemov = 80;
 
 %ni_usb_device = '6008'; %Default USB DAQ
 %devId = '';
+saveOriginFigures = false;
+set(handles.outputOriginFigs, 'Checked', 'off');
+
 if (isempty(triggerPhase))    
     triggerPhase = pi/2; % 90 deg
 end
@@ -647,7 +650,10 @@ end
 templateImg=imcrop(img, rectCrackStartROI);
 %% Calculate X Y correlation peaks for the original image
 imgROI = im2double(imcrop(img, rectCrackROI));
-cc2 = xcorr2(imgROI, im2double(templateImg));
+nimg = imgROI-mean(mean(imgROI));
+templateImg = im2double(templateImg) - mean(mean(imgROI)); 
+%cc2 = xcorr2(imgROI, im2double(templateImg));
+cc2 = xcorr2(nimg,templateImg);
 cc2 = cc2(size(templateImg,1):(size(cc2,1)),size(templateImg,2):size(cc2,2)); %remove the padding
 [~, imax] = max((cc2(:)));
 [yPeakOriginal, xPeakOriginal] = ind2sub(size(cc2),imax(1));
@@ -742,7 +748,7 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg SEImg referenceCrackOrigin ImgOriginDataStructure
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg SEImg referenceCrackOrigin ImgOriginDataStructure saveOriginFigures
 
 if (isempty(datastructure))
     msgbox('No images to analyse.','Error');
@@ -810,11 +816,13 @@ else
 end
 h = waitbar(0,'Calculating...');
 
-saveFigures = false;
-if (saveFigures)
+if (saveOriginFigures)
     fig1 = figure(99);
     fig1axes = axes;
     hold on;
+    if (exist('output','dir') ~= 7)
+        mkdir('output');
+    end
 end
 for i=1:MaxSlices
     try
@@ -866,7 +874,7 @@ for i=1:MaxSlices
     end
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
     %harrisfigure
-    if (saveFigures)
+    if (saveOriginFigures)
         cla(fig1axes);
         imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
         export_fig(['output/', num2str(i), '_origin.jpg'],fig1);
@@ -886,7 +894,7 @@ for i=1:MaxSlices
 end
 referenceCrackOrigin = [];
 close(h);
-if (saveFigures)
+if (saveOriginFigures)
     close(fig1);
 end
 datastructure.data=crackdata;
@@ -1457,3 +1465,25 @@ if isempty(rectCrackROI)
 end
 
 CrackOrigin
+
+
+% --------------------------------------------------------------------
+function outputOriginFigs_Callback(hObject, eventdata, handles)
+% hObject    handle to outputOriginFigs (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global saveOriginFigures
+if strcmp(get(hObject, 'Checked'),'on')
+    saveOriginFigures = false;
+    set(hObject, 'Checked', 'off');
+else
+    saveOriginFigures = true;
+    set(hObject, 'Checked', 'on');
+end
+
+
+% --------------------------------------------------------------------
+function ouputSettings_Callback(hObject, eventdata, handles)
+% hObject    handle to ouputSettings (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
