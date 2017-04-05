@@ -817,7 +817,7 @@ end
 h = waitbar(0,'Calculating...');
 
 if (saveOriginFigures)
-    fig1 = figure(99);
+    fig1 = figure('Name','Output preview','NumberTitle','off');
     fig1axes = axes;
     hold on;
     if (exist('output','dir') ~= 7)
