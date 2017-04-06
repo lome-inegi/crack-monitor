@@ -59,7 +59,7 @@ handles.output = hObject;
 guidata(hObject, handles);
 if (isempty(ImgOriginDataStructure))
     disp('Setting default values in CrackOrigin.m');
-    ImgOriginDataStructure.originRadius = 1;
+    ImgOriginDataStructure.originRadius = 5;
     ImgOriginDataStructure.radius = 0.5;
     ImgOriginDataStructure.sigma = 1;
 end

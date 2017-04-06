@@ -22,7 +22,7 @@ function varargout = CrackMonitor(varargin)
 
 % Edit the above text to modify the response to help CrackMonitor
 
-% Last Modified by GUIDE v2.5 05-Apr-2017 14:46:37
+% Last Modified by GUIDE v2.5 06-Apr-2017 08:31:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,7 +52,8 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase triggerDelay saveOriginFigures
+global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase...
+    triggerDelay saveOriginFigures continuousRefOriginUpdate
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -92,10 +93,11 @@ ImgProcDataStructure.StrelLR = 3;
 ImgProcDataStructure.CloseActions = 2;
 ImgProcDataStructure.SORemov = 80;
 
-%ni_usb_device = '6008'; %Default USB DAQ
-%devId = '';
 saveOriginFigures = false;
 set(handles.outputOriginFigs, 'Checked', 'off');
+
+continuousRefOriginUpdate = false;
+set(handles.continuousRefOrigin, 'Checked', 'off');
 
 if (isempty(triggerPhase))    
     triggerPhase = pi/2; % 90 deg
@@ -106,7 +108,7 @@ if (isempty(triggerDelay))
 end
 
 if (isempty(ImgOriginDataStructure))
-   ImgOriginDataStructure.originRadius = 1;
+   ImgOriginDataStructure.originRadius = 5;
    ImgOriginDataStructure.radius = 0.5;
    ImgOriginDataStructure.sigma = 1;
 end
@@ -748,8 +750,11 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg SEImg referenceCrackOrigin ImgOriginDataStructure saveOriginFigures
+global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg ...
+    SEImg referenceCrackOrigin ImgOriginDataStructure saveOriginFigures ...
+    continuousRefOriginUpdate breakCycle
 
+%% Data verification
 if (isempty(datastructure))
     msgbox('No images to analyse.','Error');
     return; 
@@ -773,7 +778,7 @@ if isempty(referenceCrackOrigin)
     end
 end
 
-
+%% Setup
 %Execution control
 ctrl=0;
 
@@ -814,8 +819,8 @@ else
     uiwait(h)
     return;
 end
-h = waitbar(0,'Calculating...');
 
+%% Output figures setup
 if (saveOriginFigures)
     fig1 = figure('Name','Output preview','NumberTitle','off');
     fig1axes = axes;
@@ -824,39 +829,25 @@ if (saveOriginFigures)
         mkdir('output');
     end
 end
+
+%% Waitbar
+h = waitbar(0,'Calculating...','CreateCancelBtn','setappdata(gcbf,''breakCycle'',true)');
+setappdata(h,'breakCycle',false);
+breakCycle = false;
+
+%% Main Cycle
 for i=1:MaxSlices
     try
         waitbar(i/MaxSlices,h,['Calculating... [',num2str(names(i)),'/',num2str(names(MaxSlices)),']']);
+        if (getappdata(h,'breakCycle'))
+            breakCycle = true;
+            break;
+        end
     catch
-        h = waitbar(i/MaxSlices,'Calculating...');
+        breakCycle = true;
+        break;
     end
     imgC = im2double(img(:,:,i)); 
-    
-%     % The cracks can run to either side, hence...
-%     sz=size(imgC);
-%     if rectCrackStartROI(1)>sz(2)/2
-%         % Crack to the left side
-%         difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
-%         rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
-%     else
-%         %Crack to the right side
-%         rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
-%     end
-%    
-%     % Find the crack start within 'rect1' ROI
-%     imgROI = imcrop(img(:,:,i), rect1); 
-% % 	[cim, RC, I] = harris(im2double(imgC), sigma, thresh, radius, disp, rect2);
-% %   A = RC(I,:);
-%     cc = normxcorr2(templateImg,imgROI); 
-%     [~, imax] = max(abs(cc(:)));
-%     [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-%     corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-% 
-%     XX=rect1(1)+corr_offset(2);                  
-%     YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
-%     
-%     crackOrigin=[YY XX];
-    
     
     %% HARRIS
     % Find the crack start ROI within 'rectCrackROI' ROI  
@@ -869,8 +860,10 @@ for i=1:MaxSlices
        deltaX = referenceCrackOrigin(2); deltaY = referenceCrackOrigin(1);
     else
         deltaX = c; deltaY = r;
-        referenceCrackOrigin(2) = deltaX;
-        referenceCrackOrigin(1) = deltaY;
+        if (continuousRefOriginUpdate)
+            referenceCrackOrigin(2) = deltaX;
+            referenceCrackOrigin(1) = deltaY;
+        end
     end
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
     %harrisfigure
@@ -892,13 +885,26 @@ for i=1:MaxSlices
     % fill_listbox (['Projection  angle in XX Axis = ' num2str(angle) ' degrees']);
     fill_listbox ('--------------------------------');  
 end
-referenceCrackOrigin = [];
-close(h);
+%% Close Waitbar
+try
+    delete(h);
+catch
+    
+end
+%% Reset crack origin if iterative
+if (continuousRefOriginUpdate)
+    referenceCrackOrigin = [];
+end
 if (saveOriginFigures)
     close(fig1);
 end
+%% Closing message
 datastructure.data=crackdata;
-msgbox('Analysis complete','');
+if (~breakCycle)
+    msgbox('Analysis complete','');
+else
+    msgbox('Analysis cancelled','');
+end
 
 
 % --------------------------------------------------------------------
@@ -914,7 +920,8 @@ function Start_Test_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global testerfreq testermag cyclesperimage vid halt Img datastructure...
        rectCrackROI rectCrackStartROI pix2mm templateImg SEImg devId ...
-       triggerPhase triggerDelay ImgOriginDataStructure referenceCrackOrigin
+       triggerPhase triggerDelay ImgOriginDataStructure referenceCrackOrigin ...
+       continuousRefOriginUpdate
 
 % img=datastructure.img;
 % MaxSlices=size(img,3);
@@ -1036,8 +1043,10 @@ while halt==0
        deltaX = referenceCrackOrigin(2); deltaY = referenceCrackOrigin(1);
     else
         deltaX = c; deltaY = r;
-        referenceCrackOrigin(2) = deltaX;
-        referenceCrackOrigin(1) = deltaY;
+        if (continuousRefOriginUpdate)
+            referenceCrackOrigin(2) = deltaX;
+            referenceCrackOrigin(1) = deltaY;
+        end
     end
     
     crackOrigin = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackStartROI(1)];
@@ -1483,7 +1492,22 @@ end
 
 
 % --------------------------------------------------------------------
-function ouputSettings_Callback(hObject, eventdata, handles)
-% hObject    handle to ouputSettings (see GCBO)
+function extraSettings_Callback(hObject, eventdata, handles)
+% hObject    handle to extraSettings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --------------------------------------------------------------------
+function continuousRefOrigin_Callback(hObject, eventdata, handles)
+% hObject    handle to continuousRefOrigin (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global continuousRefOriginUpdate
+if strcmp(get(hObject, 'Checked'),'on')
+    continuousRefOriginUpdate = false;
+    set(hObject, 'Checked', 'off');
+else
+    continuousRefOriginUpdate = true;
+    set(hObject, 'Checked', 'on');
+end
