@@ -22,7 +22,7 @@ function varargout = CrkOpt(varargin)
 
 % Edit the above text to modify the response to help CrkOpt
 
-% Last Modified by GUIDE v2.5 13-May-2013 15:58:37
+% Last Modified by GUIDE v2.5 06-Apr-2017 15:40:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -51,15 +51,14 @@ function CrkOpt_OpeningFcn(hObject, eventdata, handles, varargin)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrkOpt (see VARARGIN)
-global ImgProcDataStructure Defaults datastructure setupImg
+global ImgProcDataStructure Defaults datastructure setupImg currentViewBW
 % Choose default command line output for CrkOpt
 handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
 
-% UIWAIT makes CrkOpt wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
+currentViewBW = false;
 
 % --- Load image into graphics handle
 img=datastructure.img;
@@ -749,8 +748,9 @@ close
 % Process -------------------------------------------------------------
 
 function crckbin(handles, crckimg, cracROI, crackOrigin)
+global currentViewBW showContour
 
-[crckbin, lengthpix, BoundingBox] = processCrack(crckimg, cracROI, crackOrigin, false);
+[crckbin, lengthpix, BoundingBox, AreaImage] = processCrack(crckimg, cracROI, crackOrigin, false);
 
 relativeOrigin = [crackOrigin(2)-cracROI(1) crackOrigin(1)-cracROI(2)];
 
@@ -763,8 +763,54 @@ for k=1:size(crckbin,2)
     end
 end
 hold on;
-rectangle('Position',BoundingBox, 'LineWidth',1, 'EdgeColor','r');
+%rectangle('Position',BoundingBox, 'LineWidth',1, 'EdgeColor','r','LineStyle','--');
 plot(ruler,zeros(size(ruler,1))+size(crckbin,1),'w+');
-%plot(X-cracROI(1)+1,size(crckbin,1),'r+');
+
+if (isempty(showContour))
+   showContour = false; 
+end
+if (showContour)
+    contourImg = zeros(size(crckbin));
+    x1 = BoundingBox(1)+0.5;
+    x2 = x1 + BoundingBox(3) - 1;
+    y1 = BoundingBox(2)+0.5;
+    y2 = y1 + BoundingBox(4) - 1;
+    contourImg(y1:y2,x1:x2) = AreaImage;
+    imcontour(contourImg,'r-');
+end
 plot(relativeOrigin(1), relativeOrigin(2),'r+');
 hold off;
+currentViewBW = true;
+
+% --- Executes on button press in toggleViewBtn.
+function toggleViewBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to toggleViewBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global currentViewBW setupImg rectCrackROI crackOrigin_CrkOpt
+if (isempty(currentViewBW))
+    currentViewBW = false;
+end
+if (currentViewBW)
+    ShowImage(handles,1,imcrop(setupImg, rectCrackROI),[]);
+    hold on;
+    relativeOrigin = [crackOrigin_CrkOpt(2)-rectCrackROI(1) crackOrigin_CrkOpt(1)-rectCrackROI(2)];
+    plot(relativeOrigin(1), relativeOrigin(2),'r+');
+    currentViewBW = false;
+else
+    crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
+end
+
+
+% --- Executes on button press in toggleContourBtn.
+function toggleContourBtn_Callback(hObject, eventdata, handles)
+% hObject    handle to toggleContourBtn (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global showContour setupImg rectCrackROI crackOrigin_CrkOpt
+if (isempty(showContour))
+    showContour = false;
+else
+    showContour = ~showContour;
+end
+crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);

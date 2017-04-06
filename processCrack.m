@@ -1,4 +1,4 @@
-function [crckbin, lengthpix, BoundingBox] = processCrack(crckimg, cracROI, crackOrigin, saveImg)
+function [crckbin, lengthpix, BoundingBox, Image] = processCrack(crckimg, cracROI, crackOrigin, saveImg)
 global SEImg ImgProcDataStructure
 
 if (~islogical(saveImg))
@@ -82,7 +82,7 @@ end
 %of larger bright areas.
 %Next, return the bounding box's length - the crack projection on the xx axis
 
-stats = regionprops(crckbin, 'Area','BoundingBox','Extrema');
+stats = regionprops(crckbin, 'Area','BoundingBox','Extrema','Image');
 PosArray=zeros(1,length(stats)); AreaArray=zeros(1,length(stats));
 
 relativeOrigin = [crackOrigin(2)-cracROI(1) crackOrigin(1)-cracROI(2)];
@@ -129,3 +129,4 @@ end
  % is the center of the pixel. This means that lengthpix won't be a round
  % number.
 BoundingBox=stats(idxMax).BoundingBox;
+Image = stats(idxMax).Image;

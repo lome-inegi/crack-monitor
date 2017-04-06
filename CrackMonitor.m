@@ -710,9 +710,8 @@ end
 
 hWaitbar = waitbar(0,'Calculating...');
 
-img=datastructure.img;
-MaxImg=size(img,3);
-imgC = im2double(img(:,:,MaxImg)); 
+MaxImg=size(datastructure.img,3);
+imgC = im2double(datastructure.img(:,:,MaxImg)); 
 figure; imshow(imgC), hold on
 
 h = imrect(gca, rectCrackROI);
@@ -1255,14 +1254,17 @@ hold off;
 
 % --------------------------------------------------------------------
 function crackAnalysis(crckimg, cracROI)
-global SEImg areaRect
+global SEImg areaRect SEImgShow
 % Used for the SEImg calculation
-
+%% If there is a detected area rectangle, delete it
 if(~isempty(areaRect))
     delete(areaRect);
 end
+if (~isempty(SEImgShow))
+    delete(SEImgShow);
+end
 
-%Structuring elements for morphological file processing tasks below
+%% Structuring elements for morphological file processing tasks below
 SESBallOverMLab = strel('ball', 2, -2, 0);
 
 seh = [0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
@@ -1273,6 +1275,7 @@ seh = [0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
        0 0 0 0 0 0 0 0 0 0 0 0 0; 0 0 0 0 0 0 0 0 0 0 0 0 0;...
        0 0 0 0 0 0 0 0 0 0 0 0 0];
 
+%% Morphological processing
 imgC = im2double(imcrop(crckimg, cracROI));
 
 imCl = imclose(imgC,SESBallOverMLab);
@@ -1289,23 +1292,23 @@ se = strel(seh);
 bw=imclose(bw,se);
 crckbin=bwareaopen(bw,100);
 
-%Crack length calculation
-%Area Statistics: find the largest connected components area -
-%represents the crack. Next, find the bounding box of this area and
-%return its length - the crack projection on the xx axis
+%% Crack calculation
+% Area Statistics: find the largest connected components area -
+% the crack. Next, find the bounding box of this area.
 stats = regionprops(crckbin, 'Area','BoundingBox','Extrema');
 AreaArray=zeros(1,length(stats));
 for j=1:length(stats), AreaArray(j) = stats(j).Area; end
 
 [~,idxMax] = max(AreaArray);
 
-% Extract a structuring element, SEImg, from the initial crack.
+%% Extract a structuring element, SEImg
 BB = stats(idxMax).BoundingBox;
 BBox = imcrop(crckbin,BB);
 thin=bwmorph(BBox,'thin', Inf);
 [y,x]=find(thin);y=max(y)-y;
 sy=size(thin,1);
 sx=size(x,1);
+warning('off','stats:statrobustfit:IterationLimit');
 r=robustfit(x,y);
 
 SEImg=zeros(sy,sx);line=zeros(1,sx);
@@ -1319,10 +1322,49 @@ l=19; h=l;
 rect=[sx/2-l/2 sy/2-h/2 l h];
 SEImg=imcrop(SEImg, rect);
 imwrite(SEImg,'ROI.tif','WriteMode','append');
+%% Show the structural element
+SEImgShow = imagesc(1:100,1:100,SEImg);
+%% Try not to overlay the output image with the ROI
+% The image of the structural element is expected to take 100 px
+% Check which sides are free from the cracROI
+xLeftOccupied = false;
+xRightOccupied = false;
+yTopOccupied = false;
+yBottomOccupied = false;
+if (cracROI(1) <= 100)
+    xLeftOccupied = true;
+end    
+if (cracROI(1)+cracROI(3) >= size(crckimg,2) - 100)    
+    xRightOccupied = true;
+end
+if (cracROI(2) <= 100)
+    yTopOccupied = true;
+end
+if (cracROI(2)+cracROI(4) >= size(crckimg,1) - 100)
+    yBottomOccupied = true;
+end
+% Check available corners for the image
+cornerNW = ~(xLeftOccupied && yTopOccupied);
+cornerSW = ~(xLeftOccupied && yBottomOccupied);
+cornerNE = ~(xRightOccupied && yTopOccupied);
+cornerSE = ~(xRightOccupied && yBottomOccupied);
+% Choose a corner. Priority given in the order: NW, NE, SW, SE.
+% If none is available, use NW.
+if (cornerNW)
+    %Don't change
+elseif (cornerNE)
+    SEImgShow.XData = SEImgShow.XData + size(crckimg,2) - 100;
+elseif (cornerSW)
+    SEImgShow.YData = SEImgShow.YData + size(crckimg,1) - 100;
+elseif (cornerSE)
+    SEImgShow.XData = SEImgShow.XData + size(crckimg,2) - 100;
+    SEImgShow.YData = SEImgShow.YData + size(crckimg,1) - 100;
+else
+    %Don't change either
+end
 
-imagesc(1:100,1:100,SEImg);
-
-areaRect = rectangle('Position',[BB(1)+cracROI(1), BB(2)+ cracROI(2), BB(3), BB(4)],'LineWidth',1, 'EdgeColor','r');
+%% Show the detected crack's BoundingBox
+areaRect = rectangle('Position',[BB(1)+cracROI(1), BB(2)+ cracROI(2), BB(3), BB(4)],'LineWidth',1, 'EdgeColor','b','LineStyle','-.');
 uistack(areaRect,'down',2);
 
 % --------------------------------------------------------------------
@@ -1372,8 +1414,8 @@ end
 % Once the video input object is no longer needed, delete
 % it and clear it from the workspace.
 if (~isempty(vid))
-stop(vid);
-stoppreview(vid);
+    stop(vid);
+    stoppreview(vid);
 end
 delete(vid);
 clear vid;
