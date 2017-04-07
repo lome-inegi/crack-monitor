@@ -346,22 +346,11 @@ end
 if isequal(filenames, 0)
    return
 end
-% filenames = cellstr(filenames);  % EDITED
 afile = fullfile(pathname, filenames);
 
-prompt = {'Enter data slot:'};
-dlg_title = 'Spreadsheet definition';
-num_lines = 1;
-def = {'Slot 1'};
-answer = inputdlg(prompt,dlg_title,num_lines,def);
-if (isempty(answer) && iscell(answer))
-    msgbox('Export cancelled');
-   return; 
-end
-h = waitbar(0,'Exporting...');
+h = waitbar(.1,'Exporting...');
 A=[datastructure.names; datastructure.data];
-warning('off', 'MATLAB:xlswrite:AddSheet');
-status = xlswrite(afile, A', char(answer),  'A1');
+status = xlswrite(afile, A', 1,  'A1');
 close(h);
 if status
     msgbox('Export completed');
