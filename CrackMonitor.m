@@ -768,33 +768,17 @@ if isempty(referenceCrackOrigin)
 end
 
 %% Setup
-%Execution control
+% Execution control
 ctrl=0;
 
-%Images
+% Images
 img=datastructure.img;
 MaxSlices=size(img,3);
 crackdata=zeros(1,MaxSlices);
 names=datastructure.names;
 
-%Control variable for the 'export_fig' requirement warning
+% Control variable for the 'export_fig' requirement warning
 exportFigWarning = false;
-
-%% Reference values
-%Crack start algorithm constants for the Harris attribute search 
-% sigma = 2;
-% thresh = 0.05;
-% radius = 1;
-% disp = 1;
-% I=0;
-
-%Structuring elements for morphological file processing tasks below
-% seh=[0 0 0; 1 1 1; 0 0 0];
-% sev=[0 1 0; 0 1 0; 0 1 0];
-% seSBallUnderMLab = strel('ball', 3, 3, 0);
-% seLBallUnderMLab = strel('ball', 10, 5, 0);
-% seLBallOverMLab = strel('ball', 10, -5, 0);
-% SESBallOverMLab = strel('ball', 3, -3, 0);
 
 %% Additional setup
 if isequal(ctrl,0)  
