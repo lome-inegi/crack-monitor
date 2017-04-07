@@ -147,7 +147,7 @@ h = waitbar(0,'Loading...');
 filenames = cellstr(filenames);  
 names=zeros(1,length(filenames));
 firstFileInfo = imfinfo(fullfile(pathname, filenames{1}));
-img = zeros(firstFileInfo.Height,firstFileInfo.Width,length(filenames),'uint8');
+img = zeros(firstFileInfo(1).Height,firstFileInfo(1).Width,length(filenames),'uint8');
 
 %% Main loop
 lastUpdate = 0; % Limit the number of waitbar updates
