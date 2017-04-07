@@ -52,7 +52,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
-global listbx ctrl ImgProcDataStructure ImgOriginDataStructure triggerPhase...
+global listbx ImgProcDataStructure ImgOriginDataStructure triggerPhase...
     triggerDelay saveOriginFigures continuousRefOriginUpdate
 
 
@@ -83,7 +83,6 @@ listbx.handle = handles.listbox1;
 listbx.str = {''};
 fill_listbox ('Values');  
 fill_listbox ('-------------------------------------'); 
-ctrl = 1;
 
 % Set ImgProcDataStructure defaults
 ImgProcDataStructure.ClipLimit = 0.005;
@@ -132,7 +131,7 @@ function File_Callback(hObject, eventdata, handles)
 
 % --------------------------------------------------------------------
 function File_Load_Callback(hObject, eventdata, handles)
-global ValueSlice datastructure setupImg ctrl
+global ValueSlice datastructure setupImg
 
 %% Get files
 [filenames, pathname] = uigetfile({'*.jpg';'*.tif';'*.gif';'*.*'},'MultiSelect', 'on');
@@ -204,9 +203,6 @@ else
     set(handles.slider1,'Visible','on');
 end
 
-% 'ctrl' is a control variable. While equal to '1', no measurements can be
-% performed. Only after 'Distance Calibration' will it turn '0'.
-ctrl = 1;
 string = horzcat('Original Images:', ' ', num2str(ValueSlice));
 set(handles.tOI,'Visible','on','String',string);
 setupImg = datastructure.img(:,:,ValueSlice);
@@ -438,7 +434,7 @@ function Settings_Distance_Calibation_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Distance_Calibation (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global dist ctrl datastructure
+global dist datastructure
 
 %% Checks
 if isempty(datastructure)
@@ -510,7 +506,6 @@ close;
 dist=sqrt((x1-x2)^2+(y1-y2)^2);
 %% Show DistanceCalibration form for further input
 DistanceCalibration
-ctrl = 0;
 
 % --------------------------------------------------------------------
 function Settings_Select_NI_Device_Callback(hObject, eventdata, handles)
@@ -743,7 +738,7 @@ function Images_Analysis_Callback(hObject, eventdata, handles)
 % hObject    handle to Images_Analysis (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg ...
+global datastructure rectCrackROI rectCrackStartROI pix2mm templateImg ...
     SEImg referenceCrackOrigin ImgOriginDataStructure saveOriginFigures ...
     continuousRefOriginUpdate breakCycle
 
@@ -772,9 +767,6 @@ if isempty(referenceCrackOrigin)
 end
 
 %% Setup
-% Execution control
-ctrl=0;
-
 % Images
 img=datastructure.img;
 MaxSlices=size(img,3);
@@ -784,23 +776,18 @@ names=datastructure.names;
 % Control variable for the 'export_fig' requirement warning
 exportFigWarning = false;
 
-%% Additional setup
-if isequal(ctrl,0)  
-    cla(handles.axes2,'reset');
-    set(handles.axes2,'Visible','on',...
-                    'Color',[0 0 0],...
-                    'xtick',[],'ytick',[]);
-    set(handles.listbox1,'Visible','on');
-    set(handles.tPROI,'Visible','on');
-    set(handles.tMeasurement,'Visible','on');
-    nowStr = ['Analysis run on: ' char(datetime('now'))];
-    fill_listbox(nowStr);
-    fill_listbox('--------------------------------'); 
-else
-    h = warndlg('You have to set Distance Calibration first!');
-    uiwait(h)
-    return;
-end
+%% UI setup
+cla(handles.axes2,'reset');
+set(handles.axes2,'Visible','on',...
+                'Color',[0 0 0],...
+                'xtick',[],'ytick',[]);
+set(handles.listbox1,'Visible','on');
+set(handles.tPROI,'Visible','on');
+set(handles.tMeasurement,'Visible','on');
+nowStr = ['Analysis run on: ' char(datetime('now'))];
+fill_listbox(nowStr);
+fill_listbox('--------------------------------'); 
+
 
 %% Output figures setup
 if (saveOriginFigures)
