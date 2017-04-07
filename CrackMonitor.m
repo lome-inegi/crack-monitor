@@ -764,6 +764,9 @@ MaxSlices=size(img,3);
 crackdata=zeros(1,MaxSlices);
 names=datastructure.names;
 
+%Control variable for the 'export_fig' requirement warning
+exportFigWarning = false;
+
 %% Reference values
 %Crack start algorithm constants for the Harris attribute search 
 % sigma = 2;
@@ -848,7 +851,14 @@ for i=1:MaxSlices
     if (saveOriginFigures)
         cla(fig1axes);
         imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
-        export_fig(['output/', num2str(i), '_origin.jpg'],fig1,'-native');
+        try
+            export_fig(['output/', num2str(i), '_origin.jpg'],fig1,'-native');
+        catch
+            if (~exportFigWarning)
+                fprintf(2,'''<a href="https://github.com/altmany/export_fig">export_fig</a>'' is required for figure exporting functionality\n');
+                exportFigWarning = true;
+            end
+        end
     end
     %% Calculate length
         
