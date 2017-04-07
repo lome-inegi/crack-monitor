@@ -701,25 +701,38 @@ function Settings_Analyse_pre_crack_Images_PCAnalysis_Callback(hObject, eventdat
 % hObject    handle to Settings_Analyse_pre_crack (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global datastructure ctrl rectCrackROI rectCrackStartROI pix2mm templateImg 
-
+global datastructure rectCrackROI
+%% Verify if the needed information is available
 if isempty(datastructure)
    msgbox('Not enough information for pre-crack processing', 'Error');
    return;
 end
+if isempty(rectCrackROI)
+    msgbox('Crack ROI not defined', 'Error');
+    return;
+end
 
+%% Start the waitbar
 hWaitbar = waitbar(0,'Calculating...');
-
+%% Import and show the last image from the structure
 imgC = im2double(datastructure.img(:,:,end)); 
-figure; imshow(imgC), hold on
-
+waitbar(.1,hWaitbar); % Update the waitbar
+figure('Name','Determine structure','NumberTitle','off'); imshow(imgC), hold on
+waitbar(.2,hWaitbar); % Update the waitbar
+%% Create a draggable rectangle
 h = imrect(gca, rectCrackROI);
+waitbar(.3,hWaitbar); % Update the waitbar
+%% Perform the calculations for the start rectangle
+crackAnalysis(imgC,rectCrackROI);
+waitbar(.7,hWaitbar); % Update the waitbar
+%% Add callbacks and constrains to the rectangle
 addNewPositionCallback(h,@(p) crackAnalysis(imgC, p));
 fcn = makeConstrainToRectFcn('imrect',get(gca,'XLim'),get(gca,'YLim'));
+waitbar(.9,hWaitbar);  % Update the waitbar
 setPositionConstraintFcn(h,fcn);
-crackAnalysis(imgC,rectCrackROI);
+waitbar(1,hWaitbar);  % Update the waitbar
+%% Process completed, close the waitbar
 close(hWaitbar);
-
 
 % --------------------------------------------------------------------
 function Images_Analysis_Callback(hObject, eventdata, handles)
