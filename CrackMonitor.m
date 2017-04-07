@@ -134,30 +134,46 @@ function File_Callback(hObject, eventdata, handles)
 function File_Load_Callback(hObject, eventdata, handles)
 global ValueSlice datastructure setupImg ctrl
 
-
+%% Get files
 [filenames, pathname] = uigetfile({'*.jpg';'*.tif';'*.gif';'*.*'},'MultiSelect', 'on');
 if isequal(filenames, 0)
     return
 end
 
+%% Setup waitbar
 h = waitbar(0,'Loading...');
+
+%% Pre-allocate variables
 filenames = cellstr(filenames);  
 names=zeros(1,length(filenames));
+firstFileInfo = imfinfo(fullfile(pathname, filenames{1}));
+img = zeros(firstFileInfo.Height,firstFileInfo.Width,length(filenames),'uint8');
+
+%% Main loop
+lastUpdate = 0; % Limit the number of waitbar updates
 for n = 1:length(filenames)
+    %% Update waitbar
     try
-        waitbar(n/(length(filenames)),h,['Loading... [',num2str(n),'/',num2str(length(filenames)),']' ]);
+        toUpdate = n/(length(filenames));
+        if (toUpdate > lastUpdate + 0.1) % Never update with a change smaller than 10% -> speed-up
+            waitbar(toUpdate,h,['Loading... [',num2str(n),'/',num2str(length(filenames)),']' ]);
+            lastUpdate = toUpdate;
+        end
     catch
         h = waitbar(n/(length(filenames)),'Loading...');
     end
+    %% Read new file
     afile = fullfile(pathname, filenames{n});
     [~, name, ~] = fileparts(afile);
     tempImg = imread(afile);
+    %% Save. If RGB, convert to grayscale.
     if (size(tempImg,3)==1)
         img(:,:,n) = tempImg;
     else
         disp('RGB image loaded, converting to grayscale.');
         img(:,:,n) = rgb2gray(tempImg);
     end
+    %% Add name to list. Parsing non-numeric names
     if (isnan(str2double(name)))
         if (n > 1)
             names(n) = names(n-1) + 1;
@@ -167,13 +183,13 @@ for n = 1:length(filenames)
     else
         names(n)=str2double(name);
     end
-    
 end
-
+%% Store read information
 datastructure.names = names;
 datastructure.img = img;
 datastructure.captureimg = [];
-   
+
+%% Update UI
 ValueSlice = 1;
 MaxSlices = length(filenames);
 
@@ -439,16 +455,16 @@ end
 figure; imshow(img);hold on;
 
 %% Calculate Frequency parameters for the image
-[Sy, Sx]=size(img);
+% Y direction parameters are not used
+[~, Sx]=size(img);
 fft=abs(fftshift(fft2(img))); 
-%fftVisual=log(1+fft); % Just for visualization
-[yy, xx] = find(fft==max(max(fft)));
+[~, xx] = find(fft==max(max(fft)));
 [szy, szx]=size(fft); r = [szx/2+20 szy/2-20 200 200];
 Imax = imcrop(fft,r);
 [I]=max(max(Imax));
-[yc,xc]=find(I==Imax,1,'first');
-r=floor(r);xi=r(1);yi=r(2);
-xci=xi+xc; yci=yi+yc;
+[~,xc]=find(I==Imax,1,'first');
+r=floor(r);xi=r(1);
+xci=xi+xc;
 DX = xci - xx;
 
 %% Acquire and show first point
@@ -580,7 +596,7 @@ function Settings_Select_ROI_crackStartROI_Callback(hObject, eventdata, handles)
 % hObject    handle to Settings_Select_ROI_crackStartROI (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global rectCrackStartROI setupImg templateImg datastructure yPeakOriginal xPeakOriginal rectCrackROI referenceCrackOrigin
+global rectCrackStartROI templateImg datastructure yPeakOriginal xPeakOriginal rectCrackROI referenceCrackOrigin
 %% Startup checks
 if isempty(datastructure)
    msgbox('Not enough information for ROI selection', 'Error' );
@@ -670,7 +686,7 @@ function Settings_Analyse_pre_crack_Morpho_settings_Callback(hObject, eventdata,
 % hObject    handle to Settings_Analyse_pre_crack_Morpho_settings (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global ImgProcDataStructure SEImg referenceCrackOrigin
+global SEImg referenceCrackOrigin
 if isempty(SEImg)
     msgbox('No strutural element defined, please go to Determine Structure.', 'Error'); 
     return;
@@ -682,7 +698,6 @@ if isempty(referenceCrackOrigin)
         return;
     end
 end
-
 CrkOpt;
 
 % --------------------------------------------------------------------
@@ -779,7 +794,7 @@ if isequal(ctrl,0)
     set(handles.tPROI,'Visible','on');
     set(handles.tMeasurement,'Visible','on');
     nowStr = ['Analysis run on: ' char(datetime('now'))];
-    fill_listbox([nowStr]);
+    fill_listbox(nowStr);
     fill_listbox('--------------------------------'); 
 else
     h = warndlg('You have to set Distance Calibration first!');
@@ -929,8 +944,6 @@ halt=0;
 DAQsamplerate = 100*testerfreq;
 % Number of samples necessary to count the required # cycles
 numberofsamples = floor(DAQsamplerate*cyclesperimage/testerfreq);
-% Data chunk array for each cycle
-datachunk=zeros(1,numberofsamples);
 set(handles.axes2,'DataAspectRatioMode','manual');
 set(handles.listbox1,'String','');
 set(handles.listbox1,'Visible','on');
