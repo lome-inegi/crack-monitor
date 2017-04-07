@@ -57,6 +57,8 @@ handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
+
+%% Check if there are values
 if (isempty(ImgOriginDataStructure))
     disp('Setting default values in CrackOrigin.m');
     ImgOriginDataStructure.originRadius = 5;
@@ -64,18 +66,21 @@ if (isempty(ImgOriginDataStructure))
     ImgOriginDataStructure.sigma = 1;
 end
 
+%% Choose image
 if datastructure.captureimg
     img=datastructure.captureimg;
 else
     img=datastructure.img(:,:,1);
 end
 
-% --- Load image into graphics handle
+%% Load image
 getCrackOrigin(handles,img);
 
+%% Save default parameters
 DefaultsOrigin = ImgOriginDataStructure;
 
-% originRadius
+%% Update UI elements
+% OriginRadius
 a=ImgOriginDataStructure.originRadius;
 min=0;
 max = floor(sqrt((rectCrackStartROI(3)/2).^2+(rectCrackStartROI(4)/2).^2));
@@ -87,7 +92,7 @@ set(handles.sld_originRadius,'Min',min, ...
 set(handles.edt_originRadius,'Value',a, ...
                            'String',num2str(a));
 
-% SIGMA
+% Sigma
 a = ImgOriginDataStructure.sigma;
 min=1;
 max=10;
@@ -99,7 +104,7 @@ set(handles.sld_Sigma,'Min',min, ...
 set(handles.edt_Sigma,'Value',a, ...
                         'String',num2str(a));
 
-% RADIUS
+% Radius
 a = ImgOriginDataStructure.radius;
 min=0.5;
 max=5;

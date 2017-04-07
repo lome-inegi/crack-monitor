@@ -694,7 +694,7 @@ if isempty(referenceCrackOrigin)
     end
 end
 
-uiwait (CrkOpt);
+CrkOpt;
 
 % --------------------------------------------------------------------
 function Settings_Analyse_pre_crack_Images_PCAnalysis_Callback(hObject, eventdata, handles)
@@ -710,8 +710,7 @@ end
 
 hWaitbar = waitbar(0,'Calculating...');
 
-MaxImg=size(datastructure.img,3);
-imgC = im2double(datastructure.img(:,:,MaxImg)); 
+imgC = im2double(datastructure.img(:,:,end)); 
 figure; imshow(imgC), hold on
 
 h = imrect(gca, rectCrackROI);
@@ -849,7 +848,7 @@ for i=1:MaxSlices
     if (saveOriginFigures)
         cla(fig1axes);
         imshow(imgC,'Parent',fig1axes); hold(fig1axes,'on'); plot(fig1axes,crackOrigin(2),crackOrigin(1),'r+');rectangle('Parent',fig1axes,'Position',rectCrackStartROI,'EdgeColor','r');rectangle('Parent',fig1axes,'Position',correctedCrackStartROI,'EdgeColor','b');
-        export_fig(['output/', num2str(i), '_origin.jpg'],fig1);
+        export_fig(['output/', num2str(i), '_origin.jpg'],fig1,'-native');
     end
     %% Calculate length
         
@@ -930,16 +929,12 @@ setVideo;
 
 %% Initial setup
 halt=0;
-nrdispcycles = 5;
 % Sample rate for DAQ. The global "testerfreq" is updated in "CountCycles"
 DAQsamplerate = 100*testerfreq;
 % Number of samples necessary to count the required # cycles
 numberofsamples = floor(DAQsamplerate*cyclesperimage/testerfreq);
-% Data array to display. nrdispcycles data chunks
-data=zeros(1,nrdispcycles*numberofsamples);
 % Data chunk array for each cycle
 datachunk=zeros(1,numberofsamples);
-l=length(datachunk);
 set(handles.axes2,'DataAspectRatioMode','manual');
 set(handles.listbox1,'String','');
 set(handles.listbox1,'Visible','on');
@@ -950,7 +945,6 @@ k=1;
 TotalTime=0;
 TotalCycles=0;
 newnumberofsamples = numberofsamples;
-elapseddatapoints = 0;
 
 %% Verify NI DAQ
 debug=false;
@@ -1035,17 +1029,15 @@ while halt==0
 
     ET=toc;
     tic
-%   Use the time elapsed in calculations to start counting cycles ahead so
-%   the #cycles remains constant 
+    % Use the time elapsed in calculations to start counting cycles ahead so
+    % the #cycles remains constant 
     elapsedcycles = ET*testerfreq - cyclesperimage;
     TotalTime = TotalTime + ET;
     TotalCycles = TotalCycles + floor(ET*testerfreq);
     if (elapsedcycles > 0) && (i > 1)
         newnumberofsamples = floor(DAQsamplerate*(cyclesperimage - elapsedcycles)/testerfreq);
-        elapseddatapoints = numberofsamples - newnumberofsamples;
     else
         newnumberofsamples = numberofsamples;
-        elapseddatapoints = 0;
         elapsedcycles=0;
     end
     %% Update listbox
@@ -1074,7 +1066,7 @@ halt=1;
 
 % --------------------------------------------------------------------
 function GrabImage(handletofigure,j)
-global vid Img datastructure cyclesperimage rectCrackROI
+global vid Img datastructure rectCrackROI
 if isempty(vid)
     return;
 end
@@ -1104,7 +1096,6 @@ global testerfreq testermag cyclesperimage minimumpeakheight halt devId
 if isempty(devId)
    return; 
 end
-s = [];
 try
    s = daq.createSession('ni');
 catch
@@ -1135,14 +1126,14 @@ lastPeakTime = triggerTime + timestamps(lastPeakLoc)/24/60/60;
 lastPeakMag = data(lastPeakLoc);
 
 if flag
-%	Zero-pad to increase #bins and frequency resolution
+    % Zero-pad to increase #bins and frequency resolution
     data1=wextend('1D','zpd',data,32*numberofsamples,'r');
     [f,mag] = daqdocfft(data1,DAQsamplerate,33*numberofsamples);
     [~,maxindex]= max(mag);
 
-%   Updates the global variable "testerfreq"
-    testerfreq=f(maxindex);    %freq(index)
-	testermag=mean(peaks);   %mag(maxindex);    %magnitude(index)
+    % Updates the global variable "testerfreq"
+    testerfreq=f(maxindex);
+	testermag=mean(peaks);
     minimumpeakheight=0.95*testermag;
 end
 
@@ -1165,23 +1156,13 @@ f = f(:);
 
 % --------------------------------------------------------------------
 function setVideo
-global vid src
+global vid
 
 set(vid, 'ReturnedColorSpace', 'grayscale');
 set(vid,'FramesPerTrigger',5,'TriggerRepeat',inf);
 if ~isrunning(vid)
-triggerconfig(vid,'Manual');
+    triggerconfig(vid,'Manual');
 end
-% Access the device's video source.
-% src = getselectedsource(vid);
-% Set the focus value established at the camera setup
-% set(src,'FocusMode','Manual');
-% src.Focus=focusvalue;
-% Determine the device specific frame rates (frames per second) available.
-% frameRates = get(src, 'FrameRate');
-% Configure the device's frame rate to the highest available setting.
-% src.FrameRate = frameRates{1};
-% actualRate = str2num( frameRates{1} )
 if isrunning(vid)
    stop(vid); 
 end
@@ -1193,18 +1174,17 @@ axesn=strcat('axes',num2str(AxesType));
 [SizeY, SizeX]=size(Img);
 Figpos = get(handles.figure1,'Position');
 pos=get(handles.(axesn),'Position');
-% Outpos=get(handles.(axesn),'OuterPosition');
 switch (AxesType)
 	case 1
         pos(4) = pos(3)*SizeY/SizeX;
         pos(2) = Figpos(4)-pos(4)-25;
     case 2
-    % Se SizeY ímpar, diminui 1 px
-    if mod(SizeY,2)~=0, SizeY = SizeY-1; end
-    % Cria nova imagem com a largura de "Img" e 256px de altura
-    imgBorder=zeros(128-SizeY/2, SizeX); 
-    % Copia "img" para o centro da nova imagem
-    Img = vertcat(imgBorder, Img, imgBorder);
+        % Se SizeY ímpar, diminui 1 px
+        if mod(SizeY,2)~=0, SizeY = SizeY-1; end
+        % Cria nova imagem com a largura de "Img" e 256px de altura
+        imgBorder=zeros(128-SizeY/2, SizeX); 
+        % Copia "img" para o centro da nova imagem
+        Img = vertcat(imgBorder, Img, imgBorder);
 end
 axes(handles.(axesn));
 set(handles.(axesn), 'Units','pixels',...
@@ -1229,7 +1209,6 @@ global listbx
 if strcmp(string2write,'clc') 
     listbx.str = [];
     set(listbx.handle,'String',listbx.str);
-    result = 0 ;
     return
 end
 listbx.str{end+1} = string2write;
@@ -1419,7 +1398,8 @@ if (~isempty(vid))
 end
 delete(vid);
 clear vid;
-clear all;
+clear;
+clear global;
 delete(gcf)
 
 
@@ -1438,7 +1418,7 @@ if isempty(rectCrackROI)
    return; 
 end
 
-CrackOrigin
+CrackOrigin;
 
 
 % --------------------------------------------------------------------

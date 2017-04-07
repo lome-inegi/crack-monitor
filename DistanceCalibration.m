@@ -1,4 +1,4 @@
-function varargout = Calibration(varargin)
+function varargout = DistanceCalibration(varargin)
 % CALIBRATION MATLAB code for Calibration.fig
 %      CALIBRATION, by itself, creates a new CALIBRATION or raises the existing
 %      singleton*.
@@ -53,25 +53,22 @@ function Calibration_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to Calibration (see VARARGIN)
 global dist pix2mm temp_pix2mm
 
-% Default pix2mm in case it is []
-
 % Choose default command line output for Calibration
 handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
 
+%% Backup 'pix2mm' value
 temp_pix2mm = pix2mm;
+
+%% Fill the GUI if there is a previous value of 'pix2mm'
 if isequal(pix2mm,[])
     return
 else
-    set(handles.edt_mm, 'String',num2str(dist/str2num(pix2mm),'%.2f'));
-    set(handles.edt_Pixelxmm,'String', num2str(str2num(pix2mm), '%.2f'));
+    set(handles.edt_mm, 'String',num2str(dist/str2double(pix2mm),'%.2f'));
+    set(handles.edt_Pixelxmm,'String', num2str(str2double(pix2mm), '%.2f'));
 end
-
-% UIWAIT makes Calibration wait for user response (see UIRESUME)
-% uiwait(handles.fg_Calibration);
-
 
 % --- Outputs from this function are returned to the command line.
 function varargout = Calibration_OutputFcn(hObject, eventdata, handles) 
@@ -94,8 +91,7 @@ function edt_mm_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edt_mm as text
 %        str2double(get(hObject,'String')) returns contents of edt_mm as a double
-global dist temp_pix2mm %pix2mm
-
+global dist temp_pix2mm
 Vstr = get(handles.edt_mm, 'String');
 if (~isempty(Vstr))
     set(handles.edt_Pixelxmm,'String', num2str(dist/str2double(Vstr), '%.2f'));
@@ -124,7 +120,7 @@ function edt_Pixelxmm_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edt_Pixelxmm as text
 %        str2double(get(hObject,'String')) returns contents of edt_Pixelxmm as a double
-global dist temp_pix2mm %pix2mm
+global dist temp_pix2mm
 
 temp_pix2mm = get(handles.edt_Pixelxmm, 'String');
 if (~isempty(temp_pix2mm))
@@ -163,11 +159,11 @@ function btn_OK_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global pix2mm temp_pix2mm
 
-%Vstr = get(handles.edt_mm, 'String');
-%set(handles.edt_Pixelxmm,'String', num2str(dist/str2num(Vstr), '%.2f'));
-%pix2mm = num2str(dist/str2num(Vstr));
 if (~isempty(temp_pix2mm))
     pix2mm = temp_pix2mm;
+else
+    msgbox('No conversion defined!');
+    pix2mm = [];
 end
 close();
 
@@ -180,6 +176,7 @@ function edt_mm_KeyPressFcn(hObject, eventdata, handles)
 %	Character: character interpretation of the key(s) that was pressed
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
 % handles    structure with handles and user data (see GUIDATA)
+%% Force recalculation on every KeyPress
 if (~strcmp(eventdata.Key, 'return'))
     import java.awt.Robot; import java.awt.event.*; SimKey=Robot; SimKey.keyPress(java.awt.event.KeyEvent.VK_ENTER); SimKey.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
 end
@@ -209,6 +206,7 @@ function edt_Pixelxmm_KeyPressFcn(hObject, eventdata, handles)
 %	Character: character interpretation of the key(s) that was pressed
 %	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
 % handles    structure with handles and user data (see GUIDATA)
+%% Force recalculation on every KeyPress
 if (~strcmp(eventdata.Key, 'return'))
     import java.awt.Robot; import java.awt.event.*; SimKey=Robot; SimKey.keyPress(java.awt.event.KeyEvent.VK_ENTER); SimKey.keyRelease(java.awt.event.KeyEvent.VK_ENTER);
 end

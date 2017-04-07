@@ -52,30 +52,30 @@ function CrkOpt_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to CrkOpt (see VARARGIN)
 global ImgProcDataStructure Defaults datastructure setupImg currentViewBW
+%% Setup
 % Choose default command line output for CrkOpt
 handles.output = hObject;
 
 % Update handles structure
 guidata(hObject, handles);
 
+%% Default View is not the B/W one
 currentViewBW = false;
 
-% --- Load image into graphics handle
-img=datastructure.img;
-MaxImg=size(img,3);
-setupImg = im2double(img(:,:,MaxImg)); 
-% setupImg = datastructure.img;
-% ShowImage(handles,1,setupImg,[]);
+%% Save Default Processing Parameters
+Defaults = ImgProcDataStructure;
+
+%% Load image
+setupImg = im2double(datastructure.img(:,:,end)); 
 Analyse_crack(handles);
-% --- Populate uicontrols ---
+
+%% Populate GUI controls
 % ImgProcDataStructure.ClipLimit = 0.005;
 % ImgProcDataStructure.THRect = [30 2];
 % ImgProcDataStructure.GrayThresh = 1.00;
 % ImgProcDataStructure.StrelLR = 3;
 % ImgProcDataStructure.CloseActions = 2;
 % ImgProcDataStructure.SORemov = 80;
-
-Defaults = ImgProcDataStructure;
 
 % Clip Limit 
 a=ImgProcDataStructure.ClipLimit;
@@ -94,7 +94,7 @@ set(handles.sld_ClipLimit,'Enable','off');
 set(handles.chkbx_ClipLimit,'Enable','on');
 
 % THRect 
-a=ImgProcDataStructure.THRect(1);%b=ImgProcDataStructure.THRect(2);
+a=ImgProcDataStructure.THRect(1); %b=ImgProcDataStructure.THRect(2);
 min=2;
 max=50;
 set(handles.edt_THRect,'Value',a, ...
@@ -141,7 +141,7 @@ set(handles.edt_StrelLR,'Enable','off');
 set(handles.sld_StrelLR,'Enable','off');
 set(handles.chkbx_StrelLR,'Enable','on');
 
-% # closing actions after crack analysis Strel enhancement
+% Number of closing actions after crack analysis Strel enhancement
 a=ImgProcDataStructure.CloseActions;
 min=1;
 max=5;
@@ -191,35 +191,6 @@ function Analyse_crack(handles)
 % handles    structure with handles and user data (see GUIDATA)
 global rectCrackROI rectCrackStartROI templateImg crackOrigin_CrkOpt setupImg referenceCrackOrigin ImgOriginDataStructure
 
-% imgC=setupImg;
-% MaxImg=size(img,3);
-% imgC = im2double(img(:,:,MaxImg)); 
-
-% % The cracks can run to either side, hence...
-% sz=size(setupImg);
-% if rectCrackStartROI(1)>sz(2)/2
-%     % Crack to the left side
-%     difXX = rectCrackROI(1) + rectCrackROI(3) - (rectCrackStartROI(1) + rectCrackStartROI(3));
-%     rect1 = [rectCrackStartROI(1)-rectCrackStartROI(3) rectCrackROI(2) 2*rectCrackStartROI(3)+difXX rectCrackStartROI(2)+2*rectCrackStartROI(4)-rectCrackROI(2)];
-% else
-%     %Crack to the right side
-%     rect1 = [rectCrackROI(1) rectCrackROI(2) rectCrackStartROI(1)-rectCrackROI(1)+2*rectCrackStartROI(3) rectCrackStartROI(2)-rectCrackROI(2)+2*rectCrackStartROI(4)];
-% end
-% 
-% % Find the crack start within 'rect1' ROI
-% imgROI = imcrop(setupImg, rect1); 
-% cc = normxcorr2(templateImg,imgROI); 
-% [max_cc, imax] = max(abs(cc(:)));
-% [ypeak, xpeak] = ind2sub(size(cc),imax(1));
-% corr_offset = [ (ypeak-size(templateImg,1)) (xpeak-size(templateImg,2)) ];
-% 
-% XX=rect1(1)+corr_offset(2);                  
-% YY=rect1(2)+corr_offset(1)+rectCrackStartROI(4);
-% 
-% crackOrigin=[YY XX];
-% ShowImage(handles,1,setupImg,[]), hold on;
-% plot(XX, YY,'r+'), title('corners detected');
-% rectangle('Position',rect1, 'LineWidth',1, 'EdgeColor','r'); hold off;
 %% Harris & Find ROI
 % Find the crack start ROI within 'rect1' ROI  
 correctedCrackStartROI = locateOrigin(setupImg,rectCrackROI,rectCrackStartROI,templateImg);
@@ -231,7 +202,6 @@ crackOrigin_CrkOpt = [ deltaY+correctedCrackStartROI(2) deltaX+correctedCrackSta
 %% Show result
 ShowImage(handles,1,setupImg,[]), hold on;
 plot(crackOrigin_CrkOpt(2), crackOrigin_CrkOpt(1),'r+'), title('Crack Origin detected');
-%rectangle('Position',correctedCrackStartROI, 'LineWidth',1, 'EdgeColor','b');
 hold off;
 
 
@@ -298,12 +268,10 @@ global ImgProcDataStructure Defaults crackOrigin_CrkOpt setupImg rectCrackROI
 
 checkboxStatus = get(hObject,'Value');
 if checkboxStatus==1
-%     set(handles.txt_ClipLimit,'Enable','on');
     ClipLimit=ImgProcDataStructure.ClipLimit;
     set(handles.edt_ClipLimit,'Enable','on', 'Value',ClipLimit,'String',num2str(ClipLimit));
     set(handles.sld_ClipLimit,'Enable','on', 'Value',ClipLimit);
 else
-%     set(handles.txt_ClipLimit,'Enable','off');
     ClipLimit=Defaults.ClipLimit;
     set(handles.edt_ClipLimit,'Enable','off', 'Value',ClipLimit,'String',num2str(ClipLimit));
     set(handles.sld_ClipLimit,'Enable','off', 'Value',ClipLimit);
@@ -319,7 +287,7 @@ function edt_THRect_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of edt_THRect as text
 %        str2double(get(hObject,'String')) returns contents of edt_THRect as a double
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
-THRect(1) = uint16(floor(str2num(get(handles.edt_THRect,'String'))));
+THRect(1) = uint16(floor(str2double(get(handles.edt_THRect,'String'))));
 set(handles.sld_THRect,'Value',THRect(1));
 ImgProcDataStructure.THRect(1) = THRect(1);
 crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
@@ -417,7 +385,6 @@ function sld_GrayThresh_Callback(hObject, eventdata, handles)
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
 minRes = 0.01;
 GrayThresh = floor(get(handles.sld_GrayThresh,'Value') / minRes) * minRes;
-%GrayThresh = get(handles.sld_GrayThresh,'Value');
 set(handles.edt_GrayThresh,'Value',GrayThresh);
 set(handles.edt_GrayThresh,'String',num2str(GrayThresh));
 ImgProcDataStructure.GrayThresh = GrayThresh;
@@ -462,7 +429,7 @@ function edt_StrelLR_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of edt_StrelLR as text
 %        str2double(get(hObject,'String')) returns contents of edt_StrelLR as a double
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
-StrelLR = uint16(floor(str2num(get(handles.edt_StrelLR,'String'))));
+StrelLR = uint16(floor(str2double(get(handles.edt_StrelLR,'String'))));
 set(handles.sld_StrelLR,'Value',StrelLR);
 ImgProcDataStructure.StrelLR = double(StrelLR);
 crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
@@ -532,7 +499,7 @@ function edt_CloseActions_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of edt_CloseActions as text
 %        str2double(get(hObject,'String')) returns contents of edt_CloseActions as a double
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
-CloseActions = uint16(floor(str2num(get(handles.edt_CloseActions,'String'))));
+CloseActions = uint16(floor(str2double(get(handles.edt_CloseActions,'String'))));
 set(handles.sld_CloseActions,'Value',CloseActions);
 ImgProcDataStructure.CloseActions = CloseActions;
 crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
@@ -602,7 +569,7 @@ function edt_SORemov_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'String') returns contents of edt_SORemov as text
 %        str2double(get(hObject,'String')) returns contents of edt_SORemov as a double
 global ImgProcDataStructure crackOrigin_CrkOpt setupImg rectCrackROI
-SORemov = uint16(floor(str2num(get(handles.edt_SORemov,'String'))));
+SORemov = uint16(floor(str2double(get(handles.edt_SORemov,'String'))));
 set(handles.sld_SORemov,'Value',SORemov);
 ImgProcDataStructure.SORemov = double(SORemov);
 crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
@@ -667,14 +634,7 @@ crckbin(handles,setupImg,rectCrackROI,crackOrigin_CrkOpt);
 
 function ShowImage(handles,AxesType,Img,map)
 axesn=strcat('axes',num2str(AxesType));
-[SizeY SizeX]=size(Img);
-Figpos = get(handles.figure1,'Position');
 pos=get(handles.(axesn),'Position');
-% Outpos=get(handles.(axesn),'OuterPosition');
-% pos(4) = pos(3)*SizeY/SizeX;
-% pos(1) = Figpos(3)-pos(3)-25;
-% pos(2) = Figpos(4)-pos(4)-25;
-% cla(handles.(axesn),'reset');
 axes(handles.(axesn));
 set(handles.(axesn), 'Units','pixels',...
                     'PlotBoxAspectRatioMode','manual',...
@@ -685,25 +645,12 @@ set(handles.(axesn), 'Units','pixels',...
                     'Visible', 'off',...
                     'Color',[0 0 0],...
                     'xtick',[],'ytick',[]);
-%                     'box','on','handlevisibility','off');
 imshow(Img,'Parent',handles.(axesn));
 if isempty(map)
 	colormap gray;
 else
 	colormap map;   
 end         
-
-% 
-% % --- Executes when user attempts to close figure1.
-% function figure1_CloseRequestFcn(hObject, eventdata, handles)
-% % hObject    handle to figure1 (see GCBO)
-% % eventdata  reserved - to be defined in a future version of MATLAB
-% % handles    structure with handles and user data (see GUIDATA)
-% 
-% % Hint: delete(hObject) closes the figure
-% global vid
-% delete(hObject);
-
 
 % --- Executes during object creation, after setting all properties.
 function btn_OK_CreateFcn(hObject, eventdata, handles)
@@ -716,7 +663,6 @@ function btn_OK_Callback(hObject, eventdata, handles)
 % hObject    handle to btn_OK (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 close
 
 % ---------------------------------------------------------------------
@@ -736,17 +682,8 @@ global ImgProcDataStructure Defaults
 ImgProcDataStructure = Defaults;
 close
 
-% % --- Executes when user attempts to close figure1.
-% function figure1_CloseRequestFcn(hObject, eventdata, handles)
-% % hObject    handle to figure1 (see GCBO)
-% % eventdata  reserved - to be defined in a future version of MATLAB
-% % handles    structure with handles and user data (see GUIDATA)
-% 
-% % Hint: delete(hObject) closes the figure
-% delete(hObject);
 
-% Process -------------------------------------------------------------
-
+% --- Process ---------------------------------------------------------
 function crckbin(handles, crckimg, cracROI, crackOrigin)
 global currentViewBW showContour
 
@@ -756,14 +693,13 @@ relativeOrigin = [crackOrigin(2)-cracROI(1) crackOrigin(1)-cracROI(2)];
 
 set(handles.txt_out,'String',lengthpix);
 ShowImage(handles,1,crckbin,[]);
-ruler=[];
+ruler=zeros(floor(size(crckbin,2)/50),1);
 for k=1:size(crckbin,2)
     if mod(k,50)==0
-        ruler(size(ruler,1)+1,1)=k;
+        ruler(floor(k/50),1)=k;
     end
 end
 hold on;
-%rectangle('Position',BoundingBox, 'LineWidth',1, 'EdgeColor','r','LineStyle','--');
 plot(ruler,zeros(size(ruler,1))+size(crckbin,1),'w+');
 
 if (isempty(showContour))

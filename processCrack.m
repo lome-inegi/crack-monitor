@@ -1,10 +1,11 @@
 function [crckbin, lengthpix, BoundingBox, Image] = processCrack(crckimg, cracROI, crackOrigin, saveImg)
 global SEImg ImgProcDataStructure
-
+%% Input verification
 if (~islogical(saveImg))
    saveImg = false; 
 end
 
+%% Startup definitions
 ClipLimit = ImgProcDataStructure.ClipLimit;
 THRect = ImgProcDataStructure.THRect;
 GrayThresh = ImgProcDataStructure.GrayThresh;
@@ -21,13 +22,12 @@ X=crackOrigin(2); Y=crackOrigin(1);
 sz=size(crckimg);
 % Again, the cracks can run to either side...
 if X>sz(2)/2
-%     cracROI(3)=X-cracROI(1);                        %Crack to the left side
     toRight=0;
 else
-%     cracROI(3)=cracROI(1)+cracROI(3)-X;             %Crack to the right side
     toRight=1;
 end    
 
+%% Image processing
 imgC = im2double(imcrop(crckimg, cracROI));
 imCl = imclose(imgC,SESBallOverMLab);
 imOp = imopen(imCl,SESBallOverMLab);
@@ -75,19 +75,22 @@ if (saveImg)
 	imwrite(crckbin,'ROI4.tif','WriteMode','append');
 end
 
-%Crack length calculation
-%Area Statistics: find the largest connected components area -
-%represents the crack. If a bounding box contains the origin,
-%it is the best candidate for the crack. This helps avoid the influence
-%of larger bright areas.
-%Next, return the bounding box's length - the crack projection on the xx axis
+%% Region properties calculation
+% Area Statistics: find the largest connected components area -
+% represents the crack. If a bounding box contains the origin,
+% it is the best candidate for the crack. This helps avoid the influence
+% of larger bright areas.
+% Next, return the bounding box's length - the crack projection on the xx axis
 
 stats = regionprops(crckbin, 'Area','BoundingBox','Extrema','Image');
 PosArray=zeros(1,length(stats)); AreaArray=zeros(1,length(stats));
 
+% Define the origin in 'cracROI' coordinates
 relativeOrigin = [crackOrigin(2)-cracROI(1) crackOrigin(1)-cracROI(2)];
 inside=ones(length(stats),1);
 
+%% Region selection
+% Check if the origin is contained in any of the detected regions
 corners=zeros(4,2,length(stats));
 for j=1:length(stats)
     AreaArray(j) = stats(j).Area;
@@ -106,17 +109,22 @@ for j=1:length(stats)
     inside(j) = inpolygon(relativeOrigin(1),relativeOrigin(2),xv,yv);
 end
 
+% If not, consider them all
 if ~any(inside)
     inside=~inside;
 end
 
+% Filter the areas of the ones that are not to be considered
 for k=1:length(stats)
    if(inside(k)==0)
        AreaArray(k) = 0;
    end
 end
 
+%% Find the maximum area among the selected regions
 [~,idxMax]=max(AreaArray);
+
+%% Calculate pixel length
 if toRight
     TipXX = stats(idxMax).Extrema(3);
     lengthpix = TipXX - (X-cracROI(1));
@@ -124,9 +132,11 @@ else
     TipXX = stats(idxMax).Extrema(8);
     lengthpix = (X-cracROI(1)) - TipXX;
 end
- % Usually, tipXX is a value half pixel to the left/right of the outermost
- % pixel, that is, up to the border between that pixel and the next and X
- % is the center of the pixel. This means that lengthpix won't be a round
- % number.
+% Usually, tipXX is a value half pixel to the left/right of the outermost
+% pixel, that is, up to the border between that pixel and the next and X
+% is the center of the pixel. This means that lengthpix won't be a round
+% number.
+
+%% Return the selected region's Image and BoundingBox
 BoundingBox=stats(idxMax).BoundingBox;
 Image = stats(idxMax).Image;
