@@ -1,5 +1,5 @@
 function [crckbin, lengthpix, BoundingBox, Image] = processCrack(crckimg, cracROI, crackOrigin, saveImg)
-global SEImg ImgProcDataStructure
+global SEImg ImgProcDataStructure myFolder
 %% Input verification
 if (~islogical(saveImg))
    saveImg = false; 
@@ -46,7 +46,10 @@ level = GrayThresh*graythresh(imAT);
 bw = im2bw(imAT,level);
 
 if (saveImg)
-	imwrite(bw,'ROI1.tif','WriteMode','append');
+    try
+        imwrite(bw,[myFolder 'ROI1.tif'],'WriteMode','append');
+    catch
+    end
 end
 
 % Remove BW vertical lines - scratches that still remain
@@ -58,7 +61,10 @@ bw=imdilate(bw,se);
 bw=bwmorph(bw,'bridge');
 
 if (saveImg)
-	imwrite(bw,'ROI2.tif','WriteMode','append');
+    try
+        imwrite(bw,[myFolder 'ROI2.tif'],'WriteMode','append');
+    catch
+    end
 end
 
 % Enhance the crack line with the structuring element from crack analysis
@@ -66,13 +72,19 @@ se = strel(seh);
 for i=1:CloseActions bw=imclose(bw,se); end
 
 if (saveImg)
-	imwrite(bw,'ROI3.tif','WriteMode','append');
+    try
+        imwrite(bw,[myFolder 'ROI3.tif'],'WriteMode','append');
+    catch
+    end
 end
 
 % Remove small objects
 crckbin=bwareaopen(bw,SORemov);
 if (saveImg)
-	imwrite(crckbin,'ROI4.tif','WriteMode','append');
+    try
+        imwrite(crckbin,[myFolder 'ROI4.tif'],'WriteMode','append');
+    catch
+    end
 end
 
 %% Region properties calculation

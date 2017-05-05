@@ -242,3 +242,33 @@ function triggerdelay_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+function angleInRadians = deg2rad(angleInDegrees)
+% DEG2RAD Convert angles from degrees to radians.
+%   DEG2RAD(X) converts angle units from degrees to radians for each
+%   element of X.
+%
+%   See also RAD2DEG.
+
+% Copyright 2015 The MathWorks, Inc.
+
+if isfloat(angleInDegrees)
+    angleInRadians = (pi/180) * angleInDegrees;
+else
+    error(message('MATLAB:deg2rad:nonFloatInput'))
+end
+
+function angleInDegrees = rad2deg(angleInRadians)
+% RAD2DEG Convert angles from radians to degrees.
+%   RAD2DEG(X) converts angle units from radians to degrees for each
+%   element of X.
+%
+%   See also DEG2RAD.
+
+% Copyright 2015 The MathWorks, Inc.
+
+if isfloat(angleInRadians)
+    angleInDegrees = (180/pi) * angleInRadians;
+else
+    error(message('MATLAB:rad2deg:nonFloatInput'))
+end

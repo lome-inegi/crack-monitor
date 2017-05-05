@@ -53,7 +53,7 @@ function CrackMonitor_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to CrackMonitor (see VARARGIN)
 
 global listbx ImgProcDataStructure ImgOriginDataStructure triggerPhase...
-    triggerDelay saveOriginFigures continuousRefOriginUpdate
+    triggerDelay saveOriginFigures continuousRefOriginUpdate myFolder
 
 
 set(hObject,'closerequestfcn',@CrackMonitor_CloseReq);
@@ -110,6 +110,14 @@ if (isempty(ImgOriginDataStructure))
    ImgOriginDataStructure.originRadius = 5;
    ImgOriginDataStructure.radius = 0.5;
    ImgOriginDataStructure.sigma = 1;
+end
+
+% Get the name of the user who logged in to the computer.
+userProfile = getenv('USERPROFILE');
+% Create a string to the "My Documents" folder of this Windows user:
+myFolder = sprintf('%s\\Documents\\CrackMonitor\\', userProfile);
+if (exist(myFolder,'dir') ~= 7)
+    mkdir(myFolder);
 end
 
 
@@ -1062,14 +1070,14 @@ halt=1;
 
 % --------------------------------------------------------------------
 function GrabImage(handletofigure,j)
-global vid Img datastructure rectCrackROI
+global vid Img datastructure rectCrackROI myFolder
 if isempty(vid)
     return;
 end
 trigger(vid);
 def= getdata(vid,5,'single');
 [Index, F] = BestFocusedImage(def);
-disp(['Selected image ', num2str(Index)]);
+%disp(['Selected image ', num2str(Index)]);
 if (F < 1.13 && false)   % If the best focused image is not very good, try to sharpen it
                         % Maybe let the user define the limit value?
                         % TODO: This is disabled! Select a good limit value.
@@ -1081,9 +1089,12 @@ if (F < 1.13 && false)   % If the best focused image is not very good, try to sh
     end
 end
 datastructure.captureimg=def(:,:,Index);
-imwrite(def(:,:,Index),[num2str(j),'.jpg']);
 Img=def(:,:,Index);
 ShowImage(handletofigure,1,def(:,:,Index),[]); hold on;
+try
+    imwrite(def(:,:,Index),[myFolder, num2str(j),'.jpg']);
+catch
+end
 
    
 % --------------------------------------------------------------------
@@ -1229,14 +1240,20 @@ hold off;
 
 % --------------------------------------------------------------------
 function crackAnalysis(crckimg, cracROI)
-global SEImg areaRect SEImgShow
+global SEImg areaRect SEImgShow myFolder
 % Used for the SEImg calculation
 %% If there is a detected area rectangle, delete it
 if(~isempty(areaRect))
-    delete(areaRect);
+    try
+        delete(areaRect);
+    catch
+    end
 end
 if (~isempty(SEImgShow))
-    delete(SEImgShow);
+    try
+        delete(SEImgShow);
+    catch
+    end
 end
 
 %% Structuring elements for morphological file processing tasks below
@@ -1296,7 +1313,10 @@ end
 l=19; h=l;
 rect=[sx/2-l/2 sy/2-h/2 l h];
 SEImg=imcrop(SEImg, rect);
-imwrite(SEImg,'ROI.tif','WriteMode','append');
+try
+    imwrite(SEImg,[myFolder 'ROI.tif'],'WriteMode','append');
+catch
+end
 %% Show the structural element
 SEImgShow = imagesc(1:100,1:100,SEImg);
 %% Try not to overlay the output image with the ROI
