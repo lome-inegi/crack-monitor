@@ -77,7 +77,7 @@ else
     return
 end
 
-set(handles.devices,'String',devname(1).name);
+set(handles.devices,'String',{devname(:).name});
 devid=get(handles.devices,'Value');
 set(handles.formats,'String',devinfo.DeviceInfo(devid).SupportedFormats);
 
