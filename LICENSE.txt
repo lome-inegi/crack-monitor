@@ -1,4 +1,4 @@
-Copyright (c) 2013-2018, Paulo J. Tavares, Pedro J. Sousa, Pedro M. G. P. Moreira
+Copyright (c) 2013-2018, Paulo J. Tavares, Pedro J. Sousa, N. Viriato, Mário A. P. Vaz, Pedro M. G. P. Moreira
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
